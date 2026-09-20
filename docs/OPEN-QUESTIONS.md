@@ -1,39 +1,76 @@
 # Open questions
 
-Questions that must be answered from primary sources (the NPCI circular and the
-Department of Financial Services MDR FAQ) before the rules engine can be
-considered correct. Each one changes the money.
+Questions affecting the correctness of the rules engine. Each one changes the
+money. Resolved items are retained with their source so the reasoning is not
+re-litigated.
 
-## The Rs 1,00,000 small-merchant exemption
+Primary source: [DFS MDR FAQ, 15 Sept 2026](rules/dfs-mdr-faq-2026-09-15.pdf)
 
-1. **What defines "per month"?** Calendar month, rolling 30 days, or financial
-   month? Each yields a different threshold-crossing date for the same merchant.
+---
 
-2. **What happens at the crossing?** A merchant at Rs 99,000 receives Rs 5,000.
-   Does MDR apply to only the Rs 4,000 above the line, the whole Rs 5,000
-   transaction, retroactively to the entire month, or only to subsequent
-   transactions? Four readings, four different amounts.
+## Resolved
 
-3. **Which transactions count toward the threshold?** UPI QR only, or all UPI
-   P2M? Current assumption: sub-Rs 2,000 transactions count toward the
-   threshold even though they attract no MDR individually. Must be confirmed.
+1. **What defines "per month", and what happens at the crossing?**
+   RESOLVED (Q26, Q29). Neither question applies as originally framed. MDR
+   depends on merchant account *category*, not a per-transaction running total.
+   Transition P2PM -> P2M requires exceeding Rs 1 lakh/month for 3 consecutive
+   months. There is no mid-month crossing event.
 
-4. **Does the exemption reset?** If a merchant crosses in one month and falls
-   back below in the next, do they regain exempt status immediately?
+2. **Do sub-Rs 2,000 transactions count toward the threshold?**
+   RESOLVED (Q29). The threshold is measured on total inward UPI credit, so all
+   receipts count toward it, including those that attract no MDR individually.
 
-## Rate application
+3. **Does the Rs 300 cap apply per transaction or per batch?**
+   RESOLVED (Q32, Q35). Per transaction.
 
-5. **Cap interaction.** 0.4% caps at Rs 300, binding at exactly Rs 75,000. Does
-   the cap apply per transaction or per settlement batch?
+4. **Is the Rs 2,000 threshold inclusive or exclusive?**
+   RESOLVED (Q35). Exclusive. The FAQ's own table shows Rs 2,000 -> Rs 0. MDR
+   applies only *above* Rs 2,000.
 
-6. **Capital-markets rate.** How is the 0.02% category identified from
-   transaction data -- by MCC, by counterparty, or by an explicit flag?
+---
 
-7. **GST.** Is GST charged on top of MDR, and at what rate? This materially
-   changes every computed figure.
+## Open
 
-## Data access
+5. **Rounding rule.** 0.4% of Rs 3,333 is Rs 13.332. Round half up, half even,
+   or truncate? The FAQ never says. Immaterial per transaction; across tens of
+   thousands of transactions, systematic rounding differences will surface as
+   false breaks. For a product whose premise is that our arithmetic is right,
+   this must be resolved before launch.
 
-8. **Source of truth for charged MDR.** Which PSPs expose MDR line items via
-   API rather than only in PDF or spreadsheet statements? This determines how
-   much of the ingestion layer must be format-normalisation work.
+6. **Is the P2M -> P2PM reverse transition permitted?** If a merchant falls
+   below Rs 1 lakh/month after being reclassified, do they return to P2PM, and
+   after how many months? Not addressed (Q29 describes only the forward path).
+
+7. **Exactly when does P2M status take effect** after the third qualifying
+   month -- immediately, from the following month, or on a bank review cycle?
+
+8. **Is the Rs 1 lakh threshold QR-only or all UPI inward credit?** Q23 and Q24
+   say "through UPI QR"; Q29 says "inward credit of UPI payment". These differ
+   for a merchant who also receives UPI via payment links or intent flows.
+
+9. **GST on MDR.** Not mentioned anywhere in the FAQ. If GST is charged on top
+   of MDR, every computed figure changes.
+
+10. **Education category rate.** Q42 says only "flat-fee structures or capped
+    processing rates". No rate is stated. Cannot be implemented.
+
+11. **Full list of industry-program categories.** Q33 names railways, telecom,
+    insurance and fuel "among others"; Q41 adds public utilities. The
+    enumeration is open-ended and needs the NPCI circular.
+
+12. **How is merchant category identified in transaction data?** By MCC, by an
+    explicit flag from the PSP, or by merchant registration? This determines
+    whether we can classify transactions at all from the data we receive.
+
+13. **Source of truth for charged MDR.** Which PSPs expose MDR line items via
+    API rather than only in PDF or spreadsheet statements? Determines how much
+    of ingestion is format-normalisation work.
+
+---
+
+## Where to look next
+
+The DFS FAQ is a policy document. Operational detail (rounding, MCC mapping,
+transition timing) will sit in the **NPCI circular** referenced in Q7, issued by
+the UPI and Services Steering Committee. That is the next primary source to
+obtain.
