@@ -128,3 +128,23 @@ If a real PSP rounds differently from us, every affected transaction becomes a
 false claim. **No breaks should be filed against a live PSP until the rounding
 rule is confirmed from the NPCI circular**, or until the engine is calibrated
 against a sample of that PSP's actual charges.
+
+---
+
+## D8. The unique constraint disagreed with the retry logic ~~OPEN~~ RESOLVED
+
+**Resolved 2026-09-20** by migration V4. Found by
+`IngestionIT.aFailedBatchCanBeRetried` on its very first run.
+
+ADR 0008 changed the idempotency *query* to ignore FAILED batches so a
+transient error could not block a file forever. The *constraint* on
+`ingestion_batch (tenant_id, content_hash)` was left untouched, so the
+application decided to retry and PostgreSQL refused with a duplicate key.
+
+Fixed with a partial unique index -- `WHERE status <> 'FAILED'` -- so the
+constraint now states what the code means: at most one non-failed batch per
+file, any number of failed attempts.
+
+The lesson is that application logic and database constraints encode the same
+rule in two places, and changing one without the other produces a system that
+contradicts itself.
