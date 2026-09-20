@@ -1,6 +1,7 @@
 package in.reconpilot.ingest;
 
 import in.reconpilot.AbstractIntegrationTest;
+import in.reconpilot.security.TenantContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,8 +148,18 @@ class IngestionIT extends AbstractIntegrationTest {
         List<Future<Long>> futures = new ArrayList<>();
         for (int f = 0; f < files; f++) {
             final int i = f;
-            futures.add(pool.submit(() ->
-                    service.loadRows(tenant, batches.get(i).batchId(), paths.get(i), Instant.now())));
+            futures.add(pool.submit(() -> {
+                // Each worker thread needs the tenant established: a
+                // ThreadLocal does not follow work onto a pool thread, and
+                // without it every insert would be rejected by the WITH CHECK
+                // half of the row-level security policy.
+                TenantContext.set(tenant);
+                try {
+                    return service.loadRows(tenant, batches.get(i).batchId(), paths.get(i), Instant.now());
+                } finally {
+                    TenantContext.clear();
+                }
+            }));
         }
 
         long total = 0;

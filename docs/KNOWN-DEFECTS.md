@@ -5,7 +5,10 @@ rather than fixed in passing, because each needs a considered change.
 
 ---
 
-## D1. Row-level security is enabled but not enforced (SECURITY)
+## D1. Row-level security is enabled but not enforced (SECURITY) ~~OPEN~~ RESOLVED
+
+**Resolved 2026-09-20** by ADR 0012 and migration V6. Verified by
+`TenantIsolationIT`. Original description retained below.
 
 **Severity:** high. Multi-tenant data isolation does not work.
 
@@ -176,3 +179,14 @@ The general shape is worth remembering: **configuration that lives in a shell
 profile is invisible to anything that is not that shell** -- not `/bin/sh`, not
 an app launched from the Dock, not a CI runner. A build that only works because
 of your shell is not reproducible.
+
+---
+
+## D10. The frontend does not authenticate
+
+**Severity:** blocking for the UI, introduced by ADR 0012.
+
+Every API call except `/api/auth/**` now requires a bearer token. The React
+console sends none and receives 401. It needs a login screen, token storage,
+an RTK Query `prepareHeaders` that attaches the token, and a redirect to login
+on 401.

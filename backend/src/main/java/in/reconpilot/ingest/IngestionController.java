@@ -2,6 +2,7 @@ package in.reconpilot.ingest;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import in.reconpilot.security.TenantContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,16 +42,17 @@ public class IngestionController {
      * where the outcome will appear.
      */
     @PostMapping("/api/ingest")
-    public ResponseEntity<IngestionSubmission> ingest(
-            @RequestParam String path,
-            @RequestParam(required = false) String tenant) throws IOException {
+    public ResponseEntity<IngestionSubmission> ingest(@RequestParam String path) throws IOException {
 
         Path file = Path.of(path);
         if (!Files.isReadable(file)) {
             throw new IllegalArgumentException("Not readable: " + path);
         }
 
-        IngestionSubmission s = coordinator.submit(tenantId(tenant == null ? "dev" : tenant), file);
+        // The tenant comes from the signed token, never from a parameter the
+        // caller controls. A ?tenant= parameter would let anyone write into
+        // anyone's data by editing a URL.
+        IngestionSubmission s = coordinator.submit(TenantContext.get(), file);
 
         HttpStatus status = s.alreadySeen() ? HttpStatus.OK : HttpStatus.ACCEPTED;
         return ResponseEntity.status(status)
@@ -98,12 +100,4 @@ public class IngestionController {
         return ts == null ? null : ts.toInstant();
     }
 
-    private UUID tenantId(String name) {
-        List<UUID> found = jdbc.query("SELECT id FROM tenant WHERE name = ?",
-                (rs, i) -> rs.getObject(1, UUID.class), name);
-        if (!found.isEmpty()) return found.getFirst();
-        UUID id = UUID.randomUUID();
-        jdbc.update("INSERT INTO tenant (id, name) VALUES (?, ?)", id, name);
-        return id;
-    }
 }

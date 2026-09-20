@@ -2,6 +2,7 @@ package in.reconpilot.ingest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import in.reconpilot.security.TenantContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -43,6 +44,15 @@ public class IngestionWorker {
         log.info("[{}] starting ingestion of {} on thread {}",
                 batchId, file.getFileName(), Thread.currentThread().getName());
 
+        // A ThreadLocal does not cross a thread boundary. The request thread
+        // that accepted the upload has the tenant; this pool thread does not,
+        // and without it every row-level security policy would match nothing
+        // and the ingestion would silently write and read zero rows.
+        //
+        // The tenant is passed explicitly as a parameter for exactly this
+        // reason, and re-established here for the life of the task.
+        TenantContext.set(tenantId);
+
         jdbc.update("UPDATE ingestion_batch SET status='PARSING', started_at=? WHERE id=?",
                 Timestamp.from(Instant.now()), batchId);
 
@@ -67,6 +77,10 @@ public class IngestionWorker {
                      WHERE id=?
                     """, Timestamp.from(Instant.now()),
                     e.getClass().getSimpleName() + ": " + e.getMessage(), batchId);
+        } finally {
+            // Pool threads are reused, so a tenant left behind becomes the
+            // next ingestion's tenant.
+            TenantContext.clear();
         }
     }
 }

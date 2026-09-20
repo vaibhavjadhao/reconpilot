@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +30,12 @@ public class StartupRecovery implements ApplicationRunner {
 
     private final JdbcTemplate jdbc;
 
-    public StartupRecovery(JdbcTemplate jdbc) {
+    public StartupRecovery(@Qualifier("adminJdbcTemplate") JdbcTemplate jdbc) {
+        // The owner connection, deliberately. This sweep spans every tenant
+        // and runs at startup, when there is no logged-in user and therefore
+        // no tenant context -- on the application connection, row-level
+        // security would correctly hide every row and the sweep would silently
+        // do nothing.
         this.jdbc = jdbc;
     }
 
