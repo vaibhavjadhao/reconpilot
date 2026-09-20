@@ -27,6 +27,21 @@ public class ApiExceptionHandler {
                 "message", e.getMessage());
     }
 
+    /**
+     * The ingestion pool is full: both its threads and its queue.
+     *
+     * <p>503 with Retry-After is the honest answer -- the request was valid,
+     * we are simply at capacity right now. Silently queueing it instead would
+     * trade a visible rejection for an invisible OutOfMemoryError later.
+     */
+    @ExceptionHandler(java.util.concurrent.RejectedExecutionException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public Map<String, String> handleOverloaded(java.util.concurrent.RejectedExecutionException e) {
+        return Map.of(
+                "error", "INGESTION_BUSY",
+                "message", "All ingestion workers are occupied. Retry shortly.");
+    }
+
     /** A negative amount is the caller's mistake, so it is a 400, not a 500. */
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

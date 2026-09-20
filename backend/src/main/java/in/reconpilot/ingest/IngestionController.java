@@ -1,13 +1,15 @@
 package in.reconpilot.ingest;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,32 +17,87 @@ import java.util.UUID;
  * Development-only ingestion trigger.
  *
  * <p>It accepts a server-side path, which is fine on a laptop and unacceptable
- * in production: an attacker could name any file the process can read. The
- * production route is a streamed multipart upload or an object-store key, which
- * is a later step.
+ * in production: a caller could name any file the process can read. Tracked as
+ * D4 in KNOWN-DEFECTS.md. The production route is a streamed multipart upload
+ * or an object-store key.
  */
 @RestController
 public class IngestionController {
 
-    private final IngestionService ingestion;
+    private final IngestionCoordinator coordinator;
     private final JdbcTemplate jdbc;
 
-    public IngestionController(IngestionService ingestion, JdbcTemplate jdbc) {
-        this.ingestion = ingestion;
+    public IngestionController(IngestionCoordinator coordinator, JdbcTemplate jdbc) {
+        this.coordinator = coordinator;
         this.jdbc = jdbc;
     }
 
+    /**
+     * Accepts the file and returns immediately.
+     *
+     * <p>202 Accepted is the correct status: the request was valid and the work
+     * is scheduled, but it is not done. 200 would be a lie -- it claims a
+     * completed result the caller does not have. The Location header points at
+     * where the outcome will appear.
+     */
     @PostMapping("/api/ingest")
-    public IngestionResult ingest(@RequestParam String path,
-                                  @RequestParam(required = false) String tenant) throws IOException {
+    public ResponseEntity<IngestionSubmission> ingest(
+            @RequestParam String path,
+            @RequestParam(required = false) String tenant) throws IOException {
+
         Path file = Path.of(path);
         if (!Files.isReadable(file)) {
             throw new IllegalArgumentException("Not readable: " + path);
         }
-        return ingestion.ingest(tenantId(tenant == null ? "dev" : tenant), file);
+
+        IngestionSubmission s = coordinator.submit(tenantId(tenant == null ? "dev" : tenant), file);
+
+        HttpStatus status = s.alreadySeen() ? HttpStatus.OK : HttpStatus.ACCEPTED;
+        return ResponseEntity.status(status)
+                .location(URI.create("/api/ingest/" + s.batchId()))
+                .body(s);
     }
 
-    /** Finds or creates a tenant by name, so local runs need no fixtures. */
+    /** Where the client finds out how it went. */
+    @GetMapping("/api/ingest/{batchId}")
+    public BatchStatus status(@PathVariable UUID batchId) {
+        List<BatchStatus> found = jdbc.query("""
+                SELECT id, source_name, status, row_count,
+                       received_at, started_at, completed_at, error_message
+                  FROM ingestion_batch WHERE id = ?
+                """, (rs, i) -> new BatchStatus(
+                        rs.getObject(1, UUID.class),
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getObject(4) == null ? null : rs.getLong(4),
+                        instant(rs.getTimestamp(5)),
+                        instant(rs.getTimestamp(6)),
+                        instant(rs.getTimestamp(7)),
+                        rs.getString(8)), batchId);
+
+        if (found.isEmpty()) {
+            throw new IllegalArgumentException("No such batch: " + batchId);
+        }
+        return found.getFirst();
+    }
+
+    @GetMapping("/api/ingest")
+    public List<BatchStatus> recent() {
+        return jdbc.query("""
+                SELECT id, source_name, status, row_count,
+                       received_at, started_at, completed_at, error_message
+                  FROM ingestion_batch ORDER BY received_at DESC LIMIT 20
+                """, (rs, i) -> new BatchStatus(
+                        rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3),
+                        rs.getObject(4) == null ? null : rs.getLong(4),
+                        instant(rs.getTimestamp(5)), instant(rs.getTimestamp(6)),
+                        instant(rs.getTimestamp(7)), rs.getString(8)));
+    }
+
+    private static java.time.Instant instant(Timestamp ts) {
+        return ts == null ? null : ts.toInstant();
+    }
+
     private UUID tenantId(String name) {
         List<UUID> found = jdbc.query("SELECT id FROM tenant WHERE name = ?",
                 (rs, i) -> rs.getObject(1, UUID.class), name);

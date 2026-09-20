@@ -46,7 +46,10 @@ with that work rather than patched now.
 
 ---
 
-## D2. Ingestion runs synchronously inside the HTTP request
+## D2. Ingestion runs synchronously inside the HTTP request ~~OPEN~~ RESOLVED
+
+**Resolved 2026-09-20** by ADR 0008. POST now returns 202 in ~657 ms and the
+work runs on a bounded pool. Original description retained below.
 
 **Severity:** medium. Correctness is fine; the design is wrong.
 
@@ -84,3 +87,16 @@ what the caller did wrong, not how the server is built.
 exercise ingestion locally and must be removed or restricted before any
 deployment. The production route is a streamed multipart upload or an
 object-store key.
+
+---
+
+## D5. In-process work does not survive a restart
+
+**Severity:** medium. Introduced by ADR 0008.
+
+Ingestion state lives in a thread pool inside the JVM. A deploy, crash or OOM
+mid-file loses the work. `StartupRecovery` marks such batches FAILED so they are
+visible rather than stuck, but it cannot resume them and the caller is not told.
+
+**Fix:** move the queue outside the process. This, rather than throughput, is
+what a message broker buys at this scale.

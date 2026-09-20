@@ -68,31 +68,50 @@ public class IngestionService {
         this.parser = parser;
     }
 
-    public IngestionResult ingest(UUID tenantId, Path file) throws IOException {
-        long t0 = System.currentTimeMillis();
-
+    /**
+     * The synchronous part: cheap checks that the caller must hear about
+     * immediately, done before any long work is queued.
+     *
+     * <p>Hashing the file is included here deliberately. It costs roughly half
+     * a second for 148 MB, and doing it up front means a duplicate upload is
+     * rejected instantly rather than after being queued. For a 2 GB file this
+     * would be several seconds -- a tradeoff worth revisiting if it bites.
+     */
+    public PreparedBatch prepare(UUID tenantId, Path file) throws IOException {
         parser.verifyHeader(file);
         String hash = sha256(file);
 
-        // Idempotency, checked before doing any work.
-        List<UUID> existing = jdbc.query(
-                "SELECT id FROM ingestion_batch WHERE tenant_id = ? AND content_hash = ?",
-                (rs, i) -> rs.getObject(1, UUID.class), tenantId, hash);
+        // FAILED batches are deliberately excluded: a file that failed must be
+        // retryable, otherwise one transient error blocks it forever. PARSING
+        // and RECEIVED do block, because that work is genuinely in flight.
+        List<UUID> existing = jdbc.query("""
+                SELECT id FROM ingestion_batch
+                 WHERE tenant_id = ? AND content_hash = ? AND status <> 'FAILED'
+                """, (rs, i) -> rs.getObject(1, UUID.class), tenantId, hash);
         if (!existing.isEmpty()) {
             log.info("File already ingested (hash {}), skipping", hash.substring(0, 12));
-            return new IngestionResult(existing.getFirst(), 0, true,
-                    System.currentTimeMillis() - t0);
+            return new PreparedBatch(existing.getFirst(), null, true);
         }
 
         UUID batchId = UUID.randomUUID();
-        Instant recordedAt = Instant.now();   // one value for the whole file
+        Instant recordedAt = Instant.now();
 
         jdbc.update("""
                 INSERT INTO ingestion_batch
                     (id, tenant_id, source_type, source_name, content_hash, status, received_at)
-                VALUES (?, ?, 'PSP_STATEMENT', ?, ?, 'PARSING', ?)
+                VALUES (?, ?, 'PSP_STATEMENT', ?, ?, 'RECEIVED', ?)
                 """, batchId, tenantId, file.getFileName().toString(), hash,
                 Timestamp.from(recordedAt));
+
+        return new PreparedBatch(batchId, recordedAt, false);
+    }
+
+    /**
+     * The long part: streams the file and writes rows. Called from a worker
+     * thread, never from an HTTP thread.
+     */
+    public long loadRows(UUID tenantId, UUID batchId, Path file, Instant recordedAt)
+            throws IOException {
 
         Map<String, UUID> merchantCache = new HashMap<>();
         List<Object[]> buffer = new ArrayList<>(BATCH_SIZE);
@@ -108,7 +127,7 @@ public class IngestionService {
                 if (buffer.size() >= BATCH_SIZE) {
                     jdbc.batchUpdate(INSERT_EVENT, buffer);
                     rows += buffer.size();
-                    buffer.clear();               // the only thing that grows, and it is bounded
+                    buffer.clear();
                 }
             }
         }
@@ -116,14 +135,7 @@ public class IngestionService {
             jdbc.batchUpdate(INSERT_EVENT, buffer);
             rows += buffer.size();
         }
-
-        jdbc.update("UPDATE ingestion_batch SET status = 'PARSED', row_count = ? WHERE id = ?",
-                rows, batchId);
-
-        long ms = System.currentTimeMillis() - t0;
-        log.info("Ingested {} rows from {} in {} ms ({} rows/sec)",
-                rows, file.getFileName(), ms, ms == 0 ? rows : rows * 1000 / ms);
-        return new IngestionResult(batchId, rows, false, ms);
+        return rows;
     }
 
     private Object[] toParams(UUID tenantId, UUID batchId, Instant recordedAt,
@@ -137,24 +149,34 @@ public class IngestionService {
     }
 
     /**
-     * Resolves a merchant reference to its id, creating the merchant on first
-     * sight. Cached per file: our sample has 2,000,000 rows but only 500
-     * distinct merchants, so this turns 2,000,000 queries into 500.
+     * Resolves a merchant reference to its id, creating it on first sight.
+     *
+     * <p>Cached per file: 2,000,000 rows but only 500 distinct merchants, so
+     * this turns 2,000,000 lookups into 500.
+     *
+     * <p>The insert is an atomic upsert rather than a check-then-act, because
+     * several files ingest concurrently and may mention the same merchant. The
+     * naive form -- SELECT, then INSERT if absent -- has a window between the
+     * two statements in which another thread can insert the same merchant,
+     * and the second INSERT then dies on the unique constraint, failing the
+     * whole batch. That bug is invisible under sequential ingestion and appears
+     * immediately under concurrency.
+     *
+     * <p>ON CONFLICT lets PostgreSQL resolve the race atomically. The
+     * apparently pointless {@code DO UPDATE SET display_name = merchant.display_name}
+     * is deliberate: {@code DO NOTHING} returns no rows, so RETURNING would
+     * yield nothing on conflict. Assigning the column to itself makes the
+     * conflicting row be returned.
      */
     private UUID merchantId(UUID tenantId, String ref, Map<String, UUID> cache) {
-        return cache.computeIfAbsent(ref, r -> {
-            List<UUID> found = jdbc.query(
-                    "SELECT id FROM merchant WHERE tenant_id = ? AND external_ref = ?",
-                    (rs, i) -> rs.getObject(1, UUID.class), tenantId, r);
-            if (!found.isEmpty()) return found.getFirst();
-
-            UUID id = UUID.randomUUID();
-            jdbc.update("""
-                    INSERT INTO merchant (id, tenant_id, external_ref, display_name)
-                    VALUES (?, ?, ?, ?)
-                    """, id, tenantId, r, r);
-            return id;
-        });
+        return cache.computeIfAbsent(ref, r -> jdbc.queryForObject("""
+                INSERT INTO merchant (id, tenant_id, external_ref, display_name)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT (tenant_id, external_ref)
+                DO UPDATE SET display_name = merchant.display_name
+                RETURNING id
+                """, (rs, i) -> rs.getObject(1, UUID.class),
+                UUID.randomUUID(), tenantId, r, r));
     }
 
     /** Hashes the file as a stream: the bytes are never all in memory at once. */
