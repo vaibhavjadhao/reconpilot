@@ -40,3 +40,15 @@ later be extracted into its own service without a rewrite.
   boundaries make extraction tractable.
 - Trade-off accepted: the whole application scales as one unit, and a defect in
   one module can affect the whole process.
+
+## Measured against the estimate, 2026-09-20
+
+Ingesting 2,000,000 real rows gave 456 bytes/row against the 300 estimated
+above -- 52% low, because the estimate counted only column data and ignored
+indexes, which turned out to be 40% of total storage.
+
+Revised figure: roughly 5.5 GB/year at 12M rows/year, against the 3.6 GB
+estimated. The conclusion is unchanged: a single PostgreSQL instance remains
+correct for years, and no decision in this ADR would have differed had the
+right number been used. Recorded because an estimate that changes no decision
+is still worth checking against reality once the data exists.
