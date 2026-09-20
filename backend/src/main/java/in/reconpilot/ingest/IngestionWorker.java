@@ -33,10 +33,12 @@ public class IngestionWorker {
 
     private final JdbcTemplate jdbc;
     private final IngestionService service;
+    private final FileStagingService staging;
 
-    public IngestionWorker(JdbcTemplate jdbc, IngestionService service) {
+    public IngestionWorker(JdbcTemplate jdbc, IngestionService service, FileStagingService staging) {
         this.jdbc = jdbc;
         this.service = service;
+        this.staging = staging;
     }
 
     @Async("ingestionExecutor")
@@ -81,6 +83,13 @@ public class IngestionWorker {
             // Pool threads are reused, so a tenant left behind becomes the
             // next ingestion's tenant.
             TenantContext.clear();
+
+            // The batch row and its transactions are durable by now, so the
+            // staged copy has done its job -- whether the batch succeeded or
+            // failed. Leaving it behind would fill the disk one upload at a
+            // time, which is the kind of fault that only shows up in
+            // production, months later, as "the server is out of space".
+            staging.discard(file);
         }
     }
 }

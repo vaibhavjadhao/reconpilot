@@ -33,7 +33,17 @@ public class IngestionCoordinator {
     }
 
     public IngestionSubmission submit(UUID tenantId, Path file) throws IOException {
-        PreparedBatch prepared = service.prepare(tenantId, file);
+        return submit(tenantId, file, service.prepare(tenantId, file));
+    }
+
+    /** Upload route: the digest is already known from staging. */
+    public IngestionSubmission submit(UUID tenantId, StagedFile staged, String originalName)
+            throws IOException {
+        return submit(tenantId, staged.path(),
+                service.prepare(tenantId, staged.path(), staged.sha256(), originalName));
+    }
+
+    private IngestionSubmission submit(UUID tenantId, Path file, PreparedBatch prepared) {
 
         if (prepared.alreadySeen()) {
             return new IngestionSubmission(prepared.batchId(), "PARSED", true);

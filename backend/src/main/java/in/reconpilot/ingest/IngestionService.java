@@ -78,8 +78,21 @@ public class IngestionService {
      * would be several seconds -- a tradeoff worth revisiting if it bites.
      */
     public PreparedBatch prepare(UUID tenantId, Path file) throws IOException {
+        // Reads the file a second time to hash it. Kept for callers that have a
+        // plain path; the upload route uses the overload below, which reuses the
+        // digest computed while the bytes were being written to disk.
+        return prepare(tenantId, file, sha256(file), file.getFileName().toString());
+    }
+
+    /**
+     * @param hash       SHA-256 computed by the caller, typically while streaming
+     *                   the upload to disk, so the bytes are read once
+     * @param sourceName the name to show a user, which is the original upload
+     *                   name rather than the randomised staging filename
+     */
+    public PreparedBatch prepare(UUID tenantId, Path file, String hash, String sourceName)
+            throws IOException {
         parser.verifyHeader(file);
-        String hash = sha256(file);
 
         // FAILED batches are deliberately excluded: a file that failed must be
         // retryable, otherwise one transient error blocks it forever. PARSING
@@ -100,7 +113,7 @@ public class IngestionService {
                 INSERT INTO ingestion_batch
                     (id, tenant_id, source_type, source_name, content_hash, status, received_at)
                 VALUES (?, ?, 'PSP_STATEMENT', ?, ?, 'RECEIVED', ?)
-                """, batchId, tenantId, file.getFileName().toString(), hash,
+                """, batchId, tenantId, sourceName, hash,
                 Timestamp.from(recordedAt));
 
         return new PreparedBatch(batchId, recordedAt, false);

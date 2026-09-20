@@ -82,7 +82,10 @@ what the caller did wrong, not how the server is built.
 
 ---
 
-## D4. Development ingestion endpoint accepts an arbitrary server path
+## D4. Development ingestion endpoint accepts an arbitrary server path ~~OPEN~~ RESOLVED
+
+**Resolved 2026-09-20** by ADR 0013: replaced with a streamed multipart upload.
+Original description below.
 
 **Severity:** high if ever deployed; currently dev-only.
 
@@ -194,3 +197,17 @@ Every API call except `/api/auth/**` now requires a bearer token. The React
 console sends none and receives 401. It needs a login screen, token storage,
 an RTK Query `prepareHeaders` that attaches the token, and a redirect to login
 on 401.
+
+---
+
+## D11. A process killed mid-batch leaves its staged upload behind
+
+**Severity:** low. Introduced by ADR 0013.
+
+`IngestionWorker` deletes the staged file in a `finally` block, which covers
+success and failure. It does not cover the JVM being killed between staging and
+completion -- the file then sits in the staging directory forever.
+
+**Fix:** a startup sweep that removes staged files with no in-flight batch,
+alongside the existing `StartupRecovery`. Low severity because one orphan per
+crash is a slow leak, not an outage.
