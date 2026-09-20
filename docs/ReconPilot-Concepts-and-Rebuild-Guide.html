@@ -1,0 +1,1778 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>ReconPilot — Concepts and Rebuild Guide</title>
+<style>
+@page { size: A4; margin: 17mm 16mm 18mm 16mm; }
+
+:root{
+  --ink:#16202e; --muted:#5b6a7d; --rule:#d9e0ea;
+  --accent:#0d6efd; --warn:#b54708; --ok:#0f7a3d; --bad:#b42318;
+  --codebg:#f6f8fb; --callout:#f2f6fc;
+}
+*{box-sizing:border-box}
+body{ font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+      font-size:10.4pt; line-height:1.52; color:var(--ink); margin:0; }
+
+/* ---------- cover ---------- */
+.cover{ height:240mm; padding:30mm 20mm 0; border-radius:3mm; overflow:hidden;
+        background:linear-gradient(160deg,#0b1020 0%,#16233f 60%,#1d3557 100%);
+        color:#eaf0fa; page-break-after:always; break-after:page; }
+.cover h1{ font-size:32pt; line-height:1.08; margin:0 0 7mm; letter-spacing:-.5pt; color:#fff; }
+.cover .sub{ font-size:12.5pt; color:#a8bcd8; margin:0 0 13mm; line-height:1.4; }
+.cover .blurb{ color:#c3d4ea; font-size:10.5pt; max-width:125mm; margin:0 0 12mm; }
+.cover .badge{ display:inline-block; border:1px solid rgba(255,255,255,.3); border-radius:3mm;
+               padding:1.5mm 3mm; font-size:9pt; margin:0 2mm 2.5mm 0; color:#cfe0f5; }
+.cover .meta{ margin-top:22mm; font-size:9.5pt; color:#8fa6c4;
+              border-top:1px solid rgba(255,255,255,.18); padding-top:5mm; }
+
+/* ---------- headings ---------- */
+h1{ font-size:19pt; margin:0 0 4mm; letter-spacing:-.3pt; page-break-before:always; page-break-after:avoid;
+    border-bottom:2.5pt solid var(--ink); padding-bottom:2mm; }
+h1.nobreak{ page-break-before:auto; }
+h2{ font-size:13.5pt; margin:8mm 0 2.5mm; page-break-after:avoid; color:#0f2a4a; }
+h3{ font-size:11.2pt; margin:6mm 0 2mm; page-break-after:avoid; }
+h4{ font-size:10.4pt; margin:4mm 0 1.5mm; page-break-after:avoid; font-style:italic; color:var(--muted); }
+p{ margin:0 0 2.6mm; }
+ul,ol{ margin:0 0 3mm; padding-left:6mm; } li{ margin-bottom:1.2mm; }
+
+/* ---------- code ---------- */
+pre{ background:var(--codebg); border:0.4pt solid var(--rule); border-left:2.5pt solid var(--accent);
+     border-radius:1.5mm; padding:3mm 3.5mm; margin:2.5mm 0 3.5mm; overflow:visible;
+     white-space:pre-wrap; word-wrap:break-word; page-break-inside:avoid; }
+code{ font-family:"SF Mono",Menlo,Consolas,ui-monospace,monospace; font-size:8.3pt; line-height:1.45; }
+p code,li code,td code{ background:var(--codebg); padding:0.3mm 1mm; border-radius:1mm; font-size:8.5pt; }
+
+/* ---------- tables ---------- */
+table{ width:100%; border-collapse:collapse; margin:2.5mm 0 4mm; font-size:9.2pt; page-break-inside:avoid; }
+th{ text-align:left; background:#eef3f9; border-bottom:1pt solid var(--rule); padding:1.8mm 2mm; font-size:8.8pt;
+    text-transform:uppercase; letter-spacing:.3pt; color:#2c3e55; }
+td{ border-bottom:0.4pt solid var(--rule); padding:1.8mm 2mm; vertical-align:top; }
+
+/* ---------- callouts ---------- */
+.box{ border:0.5pt solid var(--rule); border-left:3pt solid var(--accent); background:var(--callout);
+      padding:3mm 3.5mm; margin:3mm 0; border-radius:1.5mm; page-break-inside:avoid; }
+.box.why{ border-left-color:#7c3aed; background:#f6f2fe; }
+.box.warn{ border-left-color:var(--warn); background:#fff7ed; }
+.box.bug{ border-left-color:var(--bad); background:#fef3f2; }
+.box.ok{ border-left-color:var(--ok); background:#f0fdf4; }
+.box .t{ font-weight:700; font-size:9pt; text-transform:uppercase; letter-spacing:.4pt; display:block; margin-bottom:1.5mm; }
+.box.why .t{color:#6d28d9} .box.warn .t{color:var(--warn)} .box.bug .t{color:var(--bad)} .box.ok .t{color:var(--ok)}
+.box p:last-child{margin-bottom:0}
+
+.analogy{ border:0; background:#fffbea; border-left:3pt solid #d4a017; padding:3mm 3.5mm; margin:3mm 0;
+          border-radius:1.5mm; page-break-inside:avoid; }
+.analogy .t{ font-weight:700; font-size:9pt; color:#8a6d0b; text-transform:uppercase; letter-spacing:.4pt;
+             display:block; margin-bottom:1.5mm; }
+
+blockquote{ margin:3mm 0; padding:0 0 0 4mm; border-left:2.5pt solid var(--rule);
+            font-style:italic; color:#2c3e55; }
+
+/* ---------- misc ---------- */
+.lead{ font-size:11pt; color:var(--muted); margin-bottom:4mm; }
+.toc a{ text-decoration:none; color:var(--ink); }
+.toc li{ margin-bottom:1.6mm; }
+.small{ font-size:9pt; color:var(--muted); }
+hr{ border:0; border-top:0.5pt solid var(--rule); margin:5mm 0; }
+.kbd{ border:0.5pt solid #b8c2d0; border-bottom-width:1.2pt; border-radius:1mm; padding:0.2mm 1.2mm; font-size:8.5pt; background:#fff; }
+.two{ display:flex; gap:4mm; } .two>div{ flex:1; }
+</style></head><body>
+
+<div class="cover">
+  <h1>ReconPilot</h1>
+  <p class="sub">Every concept behind a production-shaped fintech platform<br>
+     Spring Boot &middot; PostgreSQL &middot; Docker &middot; React &middot; System Design</p>
+  <p class="blurb">A complete reference for the UPI MDR reconciliation platform: what each
+     technology does, why each decision was made, every bug we hit and what it taught, and a
+     step-by-step guide to rebuilding the whole thing from nothing.</p>
+  <div>
+    <span class="badge">Java 21</span><span class="badge">Spring Boot 4.1</span><span class="badge">PostgreSQL 17</span><span class="badge">Docker / Colima</span><span class="badge">React 19 + TypeScript</span><span class="badge">Redux Toolkit</span><span class="badge">Testcontainers</span><span class="badge">87 tests</span>
+  </div>
+  <div class="meta">
+    Written for Vaibhav Jadhao &middot; Built September 2026<br>
+    Every number, error message and measurement in this document came from the real system.
+  </div>
+</div>
+
+<h1 class="nobreak">How to use this document</h1>
+<p class="lead">This is not a tutorial to follow blindly. It is the reasoning behind a system you
+already built, written so you could rebuild it alone — and so you can defend every decision in an interview.</p>
+
+<h2>The three questions every section answers</h2>
+<table>
+<tr><th style="width:22%">Question</th><th>Why it matters</th></tr>
+<tr><td><b>What is it?</b></td><td>A plain-language explanation with a real-world analogy before any jargon.</td></tr>
+<tr><td><b>Why did we use it?</b></td><td>The specific problem in ReconPilot it solved. A technology with no problem attached is trivia.</td></tr>
+<tr><td><b>What did it cost?</b></td><td>Every choice gives something up. Knowing the tradeoff is the difference between using a tool and understanding it.</td></tr>
+</table>
+
+<div class="box why"><span class="t">The one habit worth taking from all of this</span>
+<p>Roughly a third of this document is bugs — not because the work was sloppy, but because
+<b>every one of them was found by testing a belief rather than trusting it.</b> Row-level security that was
+configured and did nothing. A test suite that destroyed a development database. A rounding difference of one paisa
+that produced 8,174 false claims.</p>
+<p>None of those would have been found by reading the code. All of them were found by asking
+<i>"is this actually true?"</i> and then checking. That habit is worth more than any framework on the cover.</p></div>
+
+<h2>What ReconPilot does</h2>
+<p>From 15 October 2026, India's UPI charges merchants a fee (MDR) on payments above ₹2,000 — ending six
+years of zero-cost UPI. The rules are conditional and stateful, and they are being implemented in weeks by
+dozens of banks and payment providers whose billing systems were all built assuming the fee was zero.</p>
+<p><b>They will get it wrong.</b> ReconPilot independently recomputes what each merchant <i>should</i> have been
+charged, compares it to what they <i>were</i> charged, and drives the difference to recovery.</p>
+
+<pre><code>Settlement file (2 GB)
+      ↓  streamed, never loaded whole
+Event log            1,000,000 transactions in 27 seconds, 256 MB heap
+      ↓  recompute every row against the published rules
+Breaks               7,300 discrepancies · ₹133,846 recoverable · 3.0 seconds
+      ↓  claim, file, chase
+Recovered money      audited, guarded, one state machine</code></pre>
+
+<h2>Contents</h2>
+<ol class="toc">
+<li><b>The machine</b> — Homebrew, the JDK, Maven, Node, Colima</li>
+<li><b>Docker</b> — containers, images, volumes, Compose, and why macOS runs Linux</li>
+<li><b>PostgreSQL</b> — schema design, money, time, indexes, and row-level security</li>
+<li><b>Spring Boot</b> — dependency injection, proxies, auto-configuration, security</li>
+<li><b>Testing</b> — unit vs integration, Testcontainers, and tests that can actually fail</li>
+<li><b>React &amp; TypeScript</b> — components, Redux Toolkit, RTK Query, MUI</li>
+<li><b>System design</b> — the ideas that transfer to any language</li>
+<li><b>Every bug, and what it taught</b></li>
+<li><b>Rebuild it from nothing</b> — step by step</li>
+<li><b>Interview answers</b> — the short versions</li>
+</ol>
+
+<h1>1 · The machine</h1>
+<p class="lead">Before any code, the tools. Each one exists because a specific job would otherwise be done by hand,
+badly, repeatedly.</p>
+
+<h2>1.1 Homebrew — a package manager for your operating system</h2>
+<div class="analogy"><span class="t">Analogy</span>
+<p>When you want WhatsApp on your phone, you don't visit their website, work out which build matches your chip,
+download an installer and tell the phone where it went. You open the Play Store and tap install. The store finds it,
+fetches the right version, installs it, and updates it later.</p>
+<p><b>macOS has no such store for developer tools.</b> Homebrew is the one the community built.</p></div>
+
+<p>Installing Java <i>without</i> Homebrew means: pick a vendor (Oracle? Adoptium? Amazon? Azul?), pick a build
+(ARM64 or x86? JDK or JRE? 17, 21 or 25?), download a <code>.dmg</code>, run an installer, set <code>JAVA_HOME</code>
+by hand, add it to <code>PATH</code> by hand — and repeat all of it to upgrade or to run two versions side by side.</p>
+<p>With Homebrew: <code>brew install openjdk@21</code>.</p>
+
+<div class="box why"><span class="t">The pattern to notice</span>
+<p>Homebrew is a <b>dependency manager</b> — the same idea as Maven for Java or npm for Node, operating one layer
+down at the level of your operating system. You declare what you want; it works out what <i>that</i> needs, fetches
+everything, and records it so it can be removed cleanly.</p>
+<p><b>"Declare intent, let the tool resolve the graph."</b> You will meet this idea four more times in this document:
+in Maven, in Docker, in Docker Compose, and in Spring's dependency injection. Recognising a pattern across
+technologies is most of what makes an experienced engineer fast in an unfamiliar stack.</p></div>
+
+<h2>1.2 The JDK, and why version choice is an engineering decision</h2>
+<p>Java ships a new version every six months, in March and September. Most are <b>feature releases</b>, supported for
+about six months. Roughly every two years one is designated <b>LTS — Long Term Support</b> — and receives security
+patches for years.</p>
+<pre><code>LTS line:   8  →  11  →  17  →  21  →  25</code></pre>
+<p><b>Enterprises run LTS versions, almost without exception.</b> No bank runs Java 27 in production.</p>
+
+<table>
+<tr><th></th><th>Java 21</th><th>Java 25</th></tr>
+<tr><td>Released</td><td>September 2023</td><td>September 2025</td></tr>
+<tr><td>Enterprise adoption in 2026</td><td><b>Dominant</b></td><td>Early adopters</td></tr>
+<tr><td>What Indian JDs ask for</td><td>17 or 21</td><td>rarely</td></tr>
+<tr><td>Library compatibility</td><td>Everything works</td><td>Occasional rough edges</td></tr>
+</table>
+
+<p>We chose <b>21</b>. You are learning Java to be hired, so you want fluency in what companies actually run. Java 21
+is also where <b>virtual threads</b> landed, which is the hottest Java interview topic right now. Nothing is lost:
+everything you learn on 21 works identically on 25.</p>
+
+<h3>OpenJDK vs "distributions" — the thing that confuses everyone</h3>
+<p><b>OpenJDK is the source code</b> — the free, open-source reference implementation. Nobody downloads
+"OpenJDK the product"; you download someone's <i>build</i> of it: Eclipse Temurin, Amazon Corretto, Azul Zulu,
+Microsoft's build, Oracle JDK.</p>
+<div class="analogy"><span class="t">Analogy</span>
+<p><b>OpenJDK is the recipe. Temurin, Corretto and Zulu are different bakeries using it.</b> The bread is
+essentially identical — all are TCK-certified, meaning they pass Oracle's official compatibility suite. They differ
+in support contracts, release cadence and minor tuning.</p></div>
+<p>This matters practically: Oracle's own JDK has had licensing terms that made companies nervous about production
+use, which is precisely why Temurin and Corretto exist. If asked <i>"which JDK and why?"</i>, answering
+<i>"Temurin, because it is TCK-certified and free of Oracle's commercial licensing constraints"</i> is a strong
+answer for a two-year developer.</p>
+
+<h3>JAVA_HOME — what it is and why builds break without it</h3>
+<p>An <b>environment variable</b> is a note pinned to your shell that every program can read.
+<code>JAVA_HOME</code> is the note saying <i>"the JDK lives at this exact path."</i> Maven, Gradle, IntelliJ,
+Tomcat and nearly every Java tool read it rather than guessing.</p>
+<pre><code># in ~/.zprofile
+export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"</code></pre>
+
+<div class="box bug"><span class="t">This bit us twice</span>
+<p><code>~/.zprofile</code> is read only by <b>zsh login shells</b>. IntelliJ launches Maven through
+<code>/bin/sh</code>, so <code>JAVA_HOME</code> never reached it and it fell back to JDK 27 — where Lombok's
+annotation processor crashed with <code>ExceptionInInitializerError: com.sun.tools.javac.tree.EndPosTable</code>.</p>
+<p><b>Configuration that lives in a shell profile is invisible to anything that is not that shell.</b> Not
+<code>/bin/sh</code>, not an app launched from the Dock, not a CI runner, not a Docker container. A build that only
+works because of your shell is not reproducible — which is exactly what CI exists to catch.</p></div>
+
+<h2>1.3 Maven — dependencies plus a standard build</h2>
+<p>You already know this concept from two directions: <code>package.json</code> and npm in Angular,
+NuGet and MSBuild in .NET. <b>Maven is both, plus strong opinions about your folder layout.</b></p>
+
+<h3>Three jobs</h3>
+<p><b>1. Dependency management.</b> You write in <code>pom.xml</code>: <i>"I need Spring Boot Web."</i> Maven
+downloads it — and everything <i>it</i> needs, and everything <i>those</i> need, recursively. That recursion is
+called <b>transitive dependencies</b> and is the whole reason these tools exist. Spring Boot Web pulls in around
+thirty libraries you never asked for and shouldn't have to think about.</p>
+
+<div class="box"><span class="t">We watched this happen live</span>
+<p><code>brew install maven</code> printed:</p>
+<pre><code>==&gt; Installing maven dependency: openjdk
+🍺  /opt/homebrew/Cellar/openjdk/27: 535 files, 391.2MB</code></pre>
+<p>Maven dragged Java 27 in as its own dependency. Suddenly there were four JDKs on the machine — and
+<code>JAVA_HOME</code> is what decided which one Maven actually used.</p></div>
+
+<p><b>2. A standard build lifecycle.</b></p>
+<pre><code>validate → compile → test → package → verify → install → deploy</code></pre>
+<p><code>mvn package</code> runs every phase up to and including <code>package</code>. The point is that
+<b>every Maven project on earth builds the same way</b> — you can clone a project you have never seen and know
+that <code>mvn package</code> will build it.</p>
+
+<p><b>3. Convention over configuration.</b> Maven doesn't ask where your source is. It knows:</p>
+<pre><code>src/main/java        your code
+src/main/resources   config files
+src/test/java        your tests
+target/              build output</code></pre>
+
+<div class="box why"><span class="t">Burn this phrase into memory</span>
+<p><b>"Convention over configuration"</b> means <i>the tool assumes sensible defaults so you only configure the
+exceptions.</i> Spring Boot is built entirely on this philosophy. When an interviewer asks
+<i>"why is Spring Boot better than plain Spring?"</i>, this idea <b>is</b> the answer.</p></div>
+
+<h3>The Maven wrapper — always use ./mvnw</h3>
+<p><code>mvnw</code> is a script committed into the project that downloads the <i>correct</i> Maven version
+automatically. It is why anyone can clone the repo and build without installing Maven first.
+<code>./mvnw</code> beats <code>mvn</code> every time.</p>
+<p>The <code>./</code> is not decoration: it tells the shell to look <i>in this exact directory</i> rather than
+searching <code>PATH</code>. That is why it only works from the folder containing it.</p>
+
+<h2>1.4 Node and npm</h2>
+<p>Same LTS reasoning as Java. Node 26 was the newest release; <b>Node 24 was the current Active LTS</b>, so we used
+24. npm is the package manager; <code>package.json</code> is the manifest; <code>node_modules</code> is where the
+resolved graph lands (and is never committed).</p>
+
+<h2>1.5 Colima instead of Docker Desktop</h2>
+<p>Docker Desktop failed to install: it needed <code>sudo</code> to create <code>/usr/local/bin</code>. Rather than
+force it, we used <b>Colima</b> — and it turned out to be the better choice anyway.</p>
+
+<table>
+<tr><th></th><th>Docker Desktop</th><th>Colima</th></tr>
+<tr><td>Install</td><td>needs your password</td><td><b>no password</b></td></tr>
+<tr><td>RAM overhead</td><td>heavy (~2–4 GB idle)</td><td><b>light, and you set the cap</b></td></tr>
+<tr><td>GUI</td><td>yes</td><td>no — CLI only</td></tr>
+<tr><td>Commands</td><td><code>docker</code>, <code>docker compose</code></td><td><b>identical</b></td></tr>
+<tr><td>Commercial licence</td><td><b>required</b> for companies &gt;250 staff</td><td><b>free, Apache 2.0</b></td></tr>
+</table>
+
+<div class="box warn"><span class="t">A licensing point worth knowing at Barclays</span>
+<p>Docker Desktop requires a <b>paid commercial licence</b> for organisations with over 250 employees or $10M+
+revenue. Barclays is comfortably over both. Many engineers install it on work machines without knowing this.
+Colima is Apache 2.0 with no such restriction. Knowing where licensing boundaries sit is a genuinely senior habit.</p></div>
+
+<pre><code>colima start --cpu 4 --memory 6 --disk 60   # start the Linux VM
+colima status                                # check
+colima stop                                  # reclaim the RAM</code></pre>
+<div class="box warn"><span class="t">Remember this one</span>
+<p><b>Colima does not start automatically at boot.</b> If <code>docker</code> ever fails with
+<i>"cannot connect to the Docker daemon"</i>, that is almost always why.</p></div>
+
+<h1>2 · Docker</h1>
+<p class="lead">The single most important infrastructure concept in the project, and the one that transfers to
+every job you will ever have.</p>
+
+<h2>2.1 The problem it solves</h2>
+<p>Every developer has said this sentence: <i>"But it works on my machine."</i> The code runs locally and breaks on
+the server — different OS, different library version, different config. Hours die here.</p>
+
+<div class="analogy"><span class="t">Analogy — the shipping container</span>
+<p>Before the 1950s, cargo ships were loaded with loose goods: barrels, sacks, crates, all different shapes. Every
+port needed different equipment, every transfer was slow and manual, and loading a ship took days.</p>
+<p>Then came the <b>standard shipping container</b>. Suddenly it didn't matter whether it held bananas or
+televisions — every container was the same size with the same fittings, so every crane, ship, truck and train
+handled it identically. This single boring invention is credited with reshaping global trade.</p>
+<p><b>Docker is that container, for software.</b> You package your app <i>plus</i> its exact dependencies
+<i>plus</i> its config into one standard unit. Every machine that can run containers runs yours identically.
+The host does not need to know or care what is inside.</p></div>
+
+<h2>2.2 Container vs virtual machine</h2>
+<p>You will be asked this in interviews.</p>
+<table>
+<tr><th></th><th>Virtual machine</th><th>Container</th></tr>
+<tr><td>Ships</td><td>an entire operating system</td><td>your app and its libraries</td></tr>
+<tr><td>Size</td><td>gigabytes</td><td>megabytes</td></tr>
+<tr><td>Start time</td><td>tens of seconds</td><td>about a second</td></tr>
+<tr><td>Kernel</td><td>its own</td><td><b>shares the host's</b></td></tr>
+</table>
+<div class="analogy"><span class="t">Analogy</span>
+<p><b>VM</b> = building a separate house for each tenant, each with its own foundation, plumbing and wiring.<br>
+<b>Container</b> = apartments in one building, sharing the foundation and plumbing, but with locked doors and fully
+separate living space.</p>
+<p>Containers give you most of the isolation at a tiny fraction of the cost. That trade-off is why the entire cloud
+industry runs on them.</p></div>
+
+<div class="box why"><span class="t">The follow-up that separates candidates</span>
+<p>"Containers share the host kernel" is the textbook line. Here is the answer of someone who has actually used it:</p>
+<p><b>Containers need a <i>Linux</i> kernel. macOS does not have one.</b> So on a Mac, Docker <i>always</i> runs a
+hidden Linux VM, and your containers run inside that. Docker Desktop hides this so thoroughly that many developers
+don't know. Colima makes it explicit — <code>colima start</code> literally starts that VM.</p>
+<p>We proved it: running <code>docker info</code> on a Mac reported <code>Operating System: Ubuntu 24.04.4 LTS</code>.</p></div>
+
+<h2>2.3 The vocabulary</h2>
+<table>
+<tr><th style="width:20%">Term</th><th>Plain meaning</th></tr>
+<tr><td><b>Image</b></td><td>A read-only template — the recipe. <code>postgres:17-alpine</code> is an image.</td></tr>
+<tr><td><b>Container</b></td><td>A running instance of an image. One image, many containers.</td></tr>
+<tr><td><b>Volume</b></td><td>Storage that lives <i>outside</i> the container, so data survives the container.</td></tr>
+<tr><td><b>Port mapping</b></td><td>A door from your machine's network into the container's private one.</td></tr>
+<tr><td><b>Registry</b></td><td>Where images are stored and fetched from (Docker Hub by default).</td></tr>
+<tr><td><b>Tag</b></td><td>The version part: <code>postgres:<b>17-alpine</b></code>. <code>latest</code> is a trap.</td></tr>
+</table>
+<p><b>Alpine</b> in a tag means the image is built on Alpine Linux, a very small distribution — smaller downloads
+and a smaller attack surface.</p>
+
+<h2>2.4 Docker Compose — declaring a whole stack</h2>
+<p>Our real <code>docker-compose.yml</code>, annotated:</p>
+<pre><code>services:                          # each "service" becomes one container
+  postgres:
+    image: postgres:17-alpine      # which image. -alpine = small Linux base
+    container_name: reconpilot-postgres   # fixed name, so docker exec is predictable
+    environment:                   # config the image reads on FIRST boot
+      POSTGRES_DB: reconpilot
+      POSTGRES_USER: reconpilot
+      POSTGRES_PASSWORD: localdev
+    ports:
+      - "5432:5432"                # HOST port : CONTAINER port
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # persist data outside the container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reconpilot -d reconpilot"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+volumes:
+  pgdata:                          # declares the named volume used above</code></pre>
+
+<div class="box"><span class="t">Note there is no <code>version:</code> key</span>
+<p>It was removed in Compose v2 and now produces a warning. Most tutorials online still include it.</p></div>
+
+<h3>Ports</h3>
+<p>A container has its own private network. <code>"5432:5432"</code> maps <i>your Mac's</i> port 5432 to the
+<i>container's</i> 5432, which is how Spring Boot running on your Mac reaches Postgres inside the container.
+The two numbers need not match: <code>"5433:5432"</code> would let you run a second Postgres without a clash.</p>
+
+<h3>Volumes — containers are disposable, data is not</h3>
+<div class="analogy"><span class="t">Analogy</span>
+<p>A container is a <b>hotel room</b>. When you check out it is wiped clean. A volume is the
+<b>luggage you take with you</b> — it exists independently of any room.</p></div>
+<pre><code>docker compose down      # stop and remove containers — volume SURVIVES
+docker compose down -v   # ...and DELETE the volume. Data is genuinely gone.</code></pre>
+
+<h3>Healthchecks — "running" is not "ready"</h3>
+<p>Postgres takes a few seconds to initialise after the process starts. Without a healthcheck, your app starts,
+tries to connect, and fails — intermittently, which is worse than failing always. The healthcheck polls until the
+database genuinely answers, so Compose reports <code>(healthy)</code> rather than leaving you to guess.</p>
+
+<h2>2.5 The commands you will actually use</h2>
+<pre><code># lifecycle
+docker compose up -d          # start everything, detached (background)
+docker compose down           # stop and remove
+docker ps                     # what is running
+docker logs reconpilot-postgres          # a container's output
+docker logs -f reconpilot-postgres       # ...and follow it live
+
+# get INSIDE a container
+docker exec -it reconpilot-postgres psql -U reconpilot -d reconpilot
+
+# housekeeping
+docker images                 # what is downloaded
+docker system df              # how much disk Docker is using
+docker system prune           # reclaim space from stopped containers</code></pre>
+
+<h3>Reading <code>docker exec -it</code></h3>
+<pre><code>docker exec  -it  reconpilot-postgres  psql -U reconpilot -d reconpilot
+└────┬────┘  └┬┘  └───────┬──────────┘  └──────────┬──────────────────┘
+  run a       i = keep    which           the program to run,
+  command     stdin open  container       with its own arguments
+  inside a    t = give
+  container   me a terminal</code></pre>
+<p>Drop <code>-it</code> and you get a one-shot command with no interactive session — which is the difference
+between running a single query and opening a psql prompt you can type into.</p>
+
+<h2>2.6 Useful psql commands once you are inside</h2>
+<pre><code>\dt                      list tables
+\d transaction_event     describe one table (columns, types, indexes)
+\di                      list indexes
+\du                      list roles/users
+\l                       list databases
+\x                       toggle expanded output (great for wide rows)
+\q                       quit</code></pre>
+
+<h2>2.7 What Docker gave <i>this</i> project</h2>
+<ul>
+<li><b>Postgres and Redis with no installers</b> — one file, one command, identical for anyone who clones the repo.</li>
+<li><b>Disposable test databases</b> — Testcontainers starts a real Postgres per test run and destroys it.</li>
+<li><b>Version pinning</b> — <code>postgres:17-alpine</code> in both Compose and tests, so the database you test
+against is the database you deploy.</li>
+</ul>
+
+<div class="box bug"><span class="t">A real bug this caused</span>
+<p>Spring Initializr generated the Testcontainers config with <code>postgres:latest</code>. Our tests ran against
+<b>18.6</b> while Compose ran <b>17</b>. Two problems: you are testing a version you do not deploy, and
+<b>the same commit tests differently next month</b> as <code>latest</code> moves. Pinning fixed both.</p></div>
+
+<h1>3 · PostgreSQL</h1>
+<p class="lead">Most of the hard thinking in ReconPilot is in the database. Not because the queries are complex,
+but because correctness, history and isolation are all enforced here rather than hoped for in application code.</p>
+
+<h2>3.1 Money must be integers</h2>
+<p>This is the single most important rule in financial software, and it is easy to get wrong because the wrong way
+appears to work.</p>
+
+<h3>The demonstration we ran on your machine</h3>
+<pre><code>--- The classic ---
+0.1 + 0.2 = 0.30000000000000004
+Is it 0.3? false
+
+--- 100,000 transactions of ₹3,333 at 0.4% ---
+double : 1333200.0000005632
+paise  : 133300000 paise = 1333000.00
+exact  : 1333000.00</code></pre>
+
+<h3>Why 0.1 + 0.2 ≠ 0.3</h3>
+<p>Computers store numbers in <b>binary</b>. Some decimals have no exact binary form — exactly as ⅓ has no exact
+decimal form (0.3333… forever). 0.1 in binary repeats forever, so the computer stores the <i>nearest representable
+value</i>. Add two approximations, get an approximation.</p>
+<p><b>This is not a Java bug.</b> It is IEEE 754, and it behaves identically in Python, JavaScript, C# and every
+other language.</p>
+
+<div class="box why"><span class="t">There are TWO bugs in that output, not one</span>
+<p>Conflating them is a mistake. The trailing <code>0.0000005632</code> is <b>floating-point error</b> — small, but
+it means you can never compare money with <code>==</code>, and in a reconciliation product comparing amounts
+<i>is the entire product</i>.</p>
+<p>The <b>₹200 gap</b> is not float error at all. It is a <b>rounding decision</b>: 0.4% of ₹3,333 is ₹13.332,
+and whether that becomes ₹13.33 or keeps the fraction changes the total at scale.</p>
+<p><b>Integers do not eliminate the rounding decision. They force you to make it once, explicitly, and apply it
+identically every time.</b> Floats make the decision for you, silently, differently depending on the values.
+That inconsistency is the real crime, not the imprecision.</p></div>
+
+<h3>The rule</h3>
+<pre><code>amount_paise  BIGINT NOT NULL CHECK (amount_paise &gt;= 0)</code></pre>
+<p>All money is <code>BIGINT</code> paise. Never <code>float</code>, <code>double</code>, <code>REAL</code> or
+<code>DOUBLE PRECISION</code>. Where division is unavoidable, use <code>BigDecimal</code> with an explicit
+<code>RoundingMode</code> defined in exactly one place. <code>BIGINT</code> holds about 9.2 × 10<sup>18</sup> paise,
+far beyond any plausible transaction.</p>
+<p>Convert at the boundary only — when parsing input and when rendering output. Those two points are where bugs
+concentrate, so they get concentrated tests.</p>
+
+<h2>3.2 Two kinds of time — bi-temporal modelling</h2>
+<p>Almost nobody gets this right, and it is what makes audit possible.</p>
+<pre><code>occurred_at   TIMESTAMPTZ NOT NULL,   -- when the payment actually happened
+recorded_at   TIMESTAMPTZ NOT NULL    -- when OUR SYSTEM learned about it</code></pre>
+
+<div class="analogy"><span class="t">Analogy</span>
+<p>A transaction happened on <b>3 March</b>. The settlement file carrying it reached you on <b>10 March</b>.</p>
+<p>If someone asks <i>"what did you believe on 5 March?"</i>, the honest answer must <b>exclude</b> that
+transaction — on the 5th you genuinely did not know about it. One timestamp cannot express that; two can.</p></div>
+
+<pre><code>-- what is true now
+SELECT ... WHERE occurred_at BETWEEN ? AND ?
+
+-- what we BELIEVED at time T  (this is the one that matters in a dispute)
+SELECT ... WHERE occurred_at BETWEEN ? AND ? AND recorded_at &lt;= T</code></pre>
+
+<div class="box"><span class="t">One recorded_at per file, not per row</span>
+<p>Every row from one ingestion shares a single <code>recorded_at</code>. We verified this:
+<code>SELECT count(DISTINCT recorded_at)</code> over 2,000,000 rows returned <b>1</b>.</p>
+<p>Calling <code>now()</code> per row would smear one file across time, so a replay filtered on
+<code>recorded_at</code> could include <i>half</i> a file — and "what did we know at 10:31" would have no
+meaningful answer.</p></div>
+
+<h2>3.3 Store facts, derive answers — event sourcing</h2>
+<p>The instinct is to keep a running total:</p>
+<pre><code>merchant.monthly_total += transaction.amount;   // every problem lives here</code></pre>
+<p>One mutable number. No history, no ordering, no explanation. It cannot be replayed, audited or corrected.</p>
+
+<div class="analogy"><span class="t">Analogy — your bank statement</span>
+<p>Your bank does not store only your balance. It stores every transaction, and the balance is <b>derived</b>.
+That is why you can dispute a charge from three years ago. If banks stored only the current balance, no dispute
+could ever be settled.</p></div>
+
+<p>So <code>transaction_event</code> is <b>append-only</b>: no UPDATE, no DELETE. A restatement from a PSP arrives
+as a <i>new row</i> with the same <code>external_txn_id</code> and a later <code>recorded_at</code>. The current
+view is the greatest <code>recorded_at</code>; the historical view is the greatest <code>recorded_at &lt;= T</code>.</p>
+
+<h3>Truth vs cache</h3>
+<pre><code>TRUTH (append-only, never changes)   CACHE (drop and rebuild anytime)
+├── transaction_event                ├── merchant_month_total
+├── merchant_category_event          ├── mdr_calculation
+└── ingestion_batch                  └── Redis projections</code></pre>
+<p>Everything on the right can be deleted and regenerated from the left. That is not merely a nice property — it is
+a <b>testable</b> one: rebuild the projections from scratch, compare to the live ones, and any difference is a bug.</p>
+
+<h2>3.4 Indexes — what they cost</h2>
+<div class="analogy"><span class="t">Analogy</span>
+<p>An index is the index at the back of a textbook. Without it, finding "idempotency" means reading every page.
+With it, you look up one entry and jump straight there.</p>
+<p>But the index took paper to print, and <b>every time the book changes, the index must be reprinted.</b> That is
+exactly the trade: faster reads, slower writes, more storage.</p></div>
+
+<p>We measured it on 2,000,000 real rows:</p>
+<table>
+<tr><th>Component</th><th>Size</th><th>Share</th></tr>
+<tr><td>Table data</td><td>522 MB</td><td>60%</td></tr>
+<tr><td><b>Indexes</b></td><td><b>349 MB</b></td><td><b>40%</b></td></tr>
+<tr><td>Total</td><td>871 MB</td><td>456 bytes/row</td></tr>
+</table>
+
+<div class="box warn"><span class="t">My estimate was 52% low</span>
+<p>ADR 0002 estimated 300 bytes per row. Reality was <b>456</b> — because the estimate counted column data and
+<b>ignored indexes entirely</b>, which turned out to be 40% of storage. That is the classic estimation mistake.</p>
+<p>But notice: the estimate was wrong in <i>detail</i> and right in <i>decision</i>. A single Postgres instance was
+still correct. <b>Back-of-envelope arithmetic is for choosing an architecture, not for capacity planning.</b></p></div>
+
+<h2>3.5 Keyset pagination, not OFFSET</h2>
+<p>A classic interview question, and the reason "our admin page gets slow after page 50" is such a common
+bug report.</p>
+<pre><code>OFFSET 500000 LIMIT 5000   -- database reads 505,000 rows and throws away 500,000
+WHERE id &gt; ? LIMIT 5000     -- index seeks straight to the position</code></pre>
+<div class="analogy"><span class="t">Analogy</span>
+<p><b>OFFSET</b> is counting pages from the front of the book every single time you want to continue reading.
+<b>Keyset</b> is a bookmark.</p></div>
+<p>OFFSET degrades with <i>every</i> page because the database must count past everything it has already returned.
+Over a million rows that is quadratic work. Keyset remembers where it stopped, so page 200 costs what page 1 cost.</p>
+<p>Our reconciliation walks a batch in 5,000-row keyset pages, which is how 1,000,000 rows scan in
+<b>3.0 seconds in a 256 MB heap</b>. The index was widened to <code>(batch_id, id)</code> to support it.</p>
+
+<h3>Why chunks rather than one long cursor</h3>
+<p>A single streaming cursor also uses constant memory — but it holds <b>one database transaction open for the
+entire run</b>. Long transactions block vacuum, accumulate write-ahead log, and make the run all-or-nothing with no
+ability to resume. Chunking gives constant memory <i>and</i> short transactions.</p>
+
+<h2>3.6 Constraints beat code</h2>
+<div class="analogy"><span class="t">Analogy</span>
+<p>A sign saying <b>"one person at a time"</b> is application logic — it works until someone ignores it.
+A <b>turnstile</b> is a database constraint.</p></div>
+<p>If a rule must never be violated, push it as far down the stack as it will go. Application code is where rules go
+to be forgotten, refactored away, or raced against.</p>
+
+<h3>Idempotency by unique constraint</h3>
+<pre><code>UNIQUE (tenant_id, content_hash)   -- SHA-256 of the file's bytes</code></pre>
+<p>Upload the same file twice and <b>PostgreSQL</b> rejects it — not an <code>if</code> statement someone can forget.
+Measured: a duplicate 148 MB upload returned in <b>652 ms</b> having written nothing.</p>
+
+<h3>Partial unique index — when the rule has an exception</h3>
+<pre><code>CREATE UNIQUE INDEX uq_batch_content_not_failed
+    ON ingestion_batch (tenant_id, content_hash)
+    WHERE status &lt;&gt; 'FAILED';</code></pre>
+<p>"At most one <i>non-failed</i> batch per file, and any number of failed attempts." A plain unique constraint
+would block retrying a file that failed once, which means one transient error blocks it forever.</p>
+
+<div class="box bug"><span class="t">Found by the very first integration test</span>
+<p>We changed the application's idempotency <i>query</i> to ignore FAILED batches, but left the <i>constraint</i>
+untouched. The code decided to retry; the database refused with a duplicate key.</p>
+<p><b>The same rule was written in two places and only one was changed.</b> A system that contradicts itself.</p></div>
+
+<h3>Upsert — let the database resolve races</h3>
+<pre><code>INSERT INTO merchant (id, tenant_id, external_ref, display_name)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (tenant_id, external_ref)
+DO UPDATE SET display_name = merchant.display_name
+RETURNING id</code></pre>
+<p>The apparently pointless <code>DO UPDATE SET x = x</code> is deliberate: <code>DO NOTHING</code> returns no rows,
+so <code>RETURNING</code> would yield nothing on conflict. Assigning the column to itself makes the conflicting row
+be returned.</p>
+<p>This replaced a <b>check-then-act race</b> that failed 12 of 14 batches on the first concurrent run —
+covered in full in §8.</p>
+
+<h2>3.7 JSONB — keep the original, always</h2>
+<pre><code>raw JSONB NOT NULL   -- the source row, verbatim</code></pre>
+<p>Every parse is a <b>lossy interpretation</b>. When a customer disputes a figure, you argue from what the PSP
+actually sent, not from your interpretation of it. Storage cost was 178 MB across 2,000,000 rows — being unable to
+prove your input is unbounded liability.</p>
+<p><code>JSONB</code> (binary JSON) is stored parsed and can be indexed; <code>JSON</code> stores the raw text.
+Prefer <code>JSONB</code> unless you need to preserve exact formatting and key order.</p>
+
+<h2>3.8 Row-level security — the feature that did nothing</h2>
+<p>RLS lets the database itself filter rows per user, so a forgotten <code>WHERE</code> clause cannot leak data.</p>
+<div class="analogy"><span class="t">Analogy</span>
+<p>Application filtering is a <b>receptionist checking badges</b>. RLS is <b>the floors being locked</b>.
+For a multi-tenant financial product you want both, because one leak is company-ending.</p></div>
+
+<div class="box bug"><span class="t">Ours was enabled and completely inert</span>
+<pre><code>relname           | rls_enabled | rls_forced
+transaction_event | t           | f            ← enabled, NOT forced
+
+current_user: reconpilot        ← also the table owner, and a superuser
+
+SELECT count(*) FROM transaction_event;   -- no tenant set
+-&gt; 2000000                                 ← everything visible</code></pre>
+<p><b>Two independent exemptions, either of which disables RLS completely:</b></p>
+<ol><li>PostgreSQL exempts a table's <b>owner</b> unless <code>FORCE</code> is also set.</li>
+<li>A <b>superuser</b> bypasses RLS entirely, even with <code>FORCE</code>.</li></ol>
+<p>The app connected as a role that was both. The policies were syntactically perfect and never consulted.</p>
+<p><b>A security control that is enabled but not enforced is worse than none</b>, because it creates false
+confidence. The schema <i>reads</i> as though isolation is handled. A reviewer would believe it.</p></div>
+
+<h3>The fix needs every part</h3>
+<pre><code>-- 1. a least-privilege role: neither owner nor superuser
+CREATE ROLE reconpilot_app LOGIN PASSWORD '...';
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO reconpilot_app;
+
+-- 2. force RLS so it applies to the owner too
+ALTER TABLE transaction_event FORCE ROW LEVEL SECURITY;
+
+-- 3. policies that govern reads AND writes
+CREATE POLICY tenant_isolation ON transaction_event
+    USING      (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
+    WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);</code></pre>
+
+<table>
+<tr><th style="width:26%">Piece</th><th>Why it is not optional</th></tr>
+<tr><td><code>FORCE</code></td><td>Without it the owner bypasses every policy.</td></tr>
+<tr><td>Non-superuser role</td><td>A superuser bypasses RLS even with FORCE. This is a precondition, not hardening.</td></tr>
+<tr><td><code>WITH CHECK</code></td><td><code>USING</code> governs <b>reads</b> only. Without this a tenant could
+<i>write</i> rows carrying another tenant's id — writable but invisible, which is worse than readable.</td></tr>
+<tr><td><code>, true</code></td><td>"missing_ok": returns NULL when unset rather than raising an error.</td></tr>
+<tr><td><code>NULLIF(…, '')</code></td><td>Cleared settings become <code>''</code>, and <code>''::uuid</code>
+<i>raises</i>. NULLIF collapses both cases to NULL, and a NULL comparison is never true — so "no tenant" means
+"no rows", which is the safe default.</td></tr>
+</table>
+
+<h3>The proof</h3>
+<pre><code>reconpilot_app, no tenant set  →    0 rows
+reconpilot_app, tenant = Acme  →  300 rows
+reconpilot_app, tenant = Globex → 120 rows
+knowing another tenant's row id →    0 rows</code></pre>
+
+<h2>3.9 Connection pooling, and the leak it creates</h2>
+<p>Opening a database connection is slow — TCP handshake, authentication, session setup. So Spring opens a handful
+up front and reuses them. That is <b>HikariCP</b>, and "why pool connections?" is a common interview question:
+<i>because the handshake costs more than the query.</i></p>
+
+<div class="box bug"><span class="t">Pooling and session variables are a dangerous combination</span>
+<p>A PostgreSQL session variable set on a pooled connection <b>stays on it</b> when it returns to the pool. The next
+request to borrow that connection inherits the previous request's tenant.</p>
+<p>That is a cross-tenant data leak caused by an optimisation that has nothing to do with tenancy — and it would be
+completely silent.</p>
+<p><b>Our defence is doubled on purpose:</b> set the tenant on <i>every checkout</i> (so whatever the last borrower
+left is overwritten) <i>and</i> clear it on close (so nothing goes back carrying state). Either alone would suffice
+in the normal path; both are there because the failure is silent and severe.</p></div>
+
+<h2>3.10 Flyway — migrations as version control for the schema</h2>
+<pre><code>V1__initial_schema.sql
+V2__batch_lifecycle_columns.sql
+V3__recon_break_idempotency.sql
+V4__allow_retry_of_failed_batches.sql
+V5__dispute_workflow.sql
+V6__auth_and_enforced_tenant_isolation.sql</code></pre>
+<p>The filename is a convention: <code>V&lt;version&gt;__&lt;description&gt;.sql</code> with <b>two</b> underscores.
+Flyway applies them in order and records each in <code>flyway_schema_history</code>, so it never runs one twice.</p>
+
+<div class="box why"><span class="t">Two settings that matter</span>
+<pre><code>spring.flyway.enabled=true
+spring.jpa.hibernate.ddl-auto=validate</code></pre>
+<p><b>Flyway owns the schema. Hibernate only checks it.</b> <code>validate</code> means Hibernate compares your
+entities to the schema and complains if they disagree, but never alters anything.</p>
+<p>The tempting alternative, <code>ddl-auto=update</code>, lets Hibernate silently change your <i>production</i>
+schema based on your Java classes. Never do that. <i>"Flyway owns schema, Hibernate validates only"</i> is the
+answer an interviewer wants.</p></div>
+
+<p>Migrations run as the <b>owner</b>; the application runs as the least-privilege role. Splitting them is the
+point — with one all-powerful connection, RLS cannot work at all.</p>
+
+<h1>4 · Spring Boot</h1>
+<p class="lead">Spring is large, but it rests on a small number of ideas. Understand those five and the rest is
+vocabulary.</p>
+
+<h2>4.1 Inversion of Control — the one idea everything else sits on</h2>
+<p>Normally <i>your</i> code decides what it needs and creates it:</p>
+<pre><code>class OrderService {
+    private final EmailSender email = new SmtpEmailSender("smtp.gmail.com", 587);
+    //                                ↑ this class now DEPENDS on SMTP forever
+}</code></pre>
+<p>Want to test it without sending real email? You can't. Want to swap to SendGrid? Edit the class.</p>
+
+<div class="analogy"><span class="t">Analogy — hiring</span>
+<p><b>Without IoC:</b> every employee recruits their own assistant, negotiates their salary and buys their laptop.
+Chaos, and nobody can be replaced.</p>
+<p><b>With IoC:</b> HR hires people and hands each employee whoever they need. The employee says <i>"I need an
+assistant"</i> and one arrives. Swapping assistants is HR's problem, not theirs.</p>
+<p><b>Spring is HR.</b> "Inversion of control" means the control over <i>who creates what</i> is inverted — moved
+out of your class and into the framework.</p></div>
+
+<pre><code>class OrderService {
+    private final EmailSender email;
+    OrderService(EmailSender email) { this.email = email; }   // just ask
+}</code></pre>
+<p>Now the class works with any <code>EmailSender</code>. In a test you pass a fake. In production Spring passes the
+real one. This is <b>dependency injection</b>, and it is why Spring code is testable.</p>
+
+<h2>4.2 Beans — the objects Spring manages</h2>
+<p>A <b>bean</b> is simply an object Spring created and holds on to. Four ways to declare one:</p>
+<table>
+<tr><th style="width:26%">Annotation</th><th>Meaning</th><th>We used it for</th></tr>
+<tr><td><code>@Component</code></td><td>generic managed object</td><td><code>SettlementCsvParser</code></td></tr>
+<tr><td><code>@Service</code></td><td>business logic (a <code>@Component</code> with intent)</td><td><code>IngestionService</code>, <code>DisputeService</code></td></tr>
+<tr><td><code>@RestController</code></td><td>handles HTTP, returns data</td><td><code>MdrController</code></td></tr>
+<tr><td><code>@Bean</code> in <code>@Configuration</code></td><td>you build it yourself</td><td><code>MdrCalculator</code>, the DataSources</td></tr>
+</table>
+
+<div class="box why"><span class="t">Why MdrCalculator is a @Bean and not a @Service</span>
+<p>This was deliberate and it is a strong interview talking point.</p>
+<pre><code>@Configuration
+public class DomainConfig {
+    @Bean MdrCalculator mdrCalculator() { return new MdrCalculator(); }
+}</code></pre>
+<p>Putting <code>@Service</code> on <code>MdrCalculator</code> would place a Spring annotation <b>inside the domain
+logic</b>. Declaring it as a <code>@Bean</code> elsewhere keeps the class plain Java.</p>
+<p>The payoff is measurable: <b>23 calculator tests run in under 20 ms</b> with no Spring context, while the one
+test that starts Spring takes 2.5 seconds.</p>
+<blockquote>The framework should know about your domain. Your domain should not know about the framework.</blockquote>
+<p>That is <b>dependency inversion</b>, the core idea behind hexagonal and clean architecture.</p></div>
+
+<h3>Constructor injection, always</h3>
+<pre><code>public MdrController(MdrCalculator calculator) { this.calculator = calculator; }</code></pre>
+<p>One constructor means Spring needs no annotation to know what to inject. Fields can be <code>final</code>, so the
+object cannot exist in a half-built state, and the dependencies are visible in the signature. Field injection
+(<code>@Autowired</code> on a field) hides them and makes the class untestable without Spring.</p>
+
+<h2>4.3 Auto-configuration — and how adding a bean can <i>remove</i> one</h2>
+<p>Spring Boot looks at your classpath and configures things automatically. Jackson present? JSON conversion is
+wired. A JDBC driver and a URL? A <code>DataSource</code> and a <code>JdbcTemplate</code> appear.</p>
+<p>It does this with <b>conditional</b> configuration — most importantly:</p>
+<pre><code>@ConditionalOnMissingBean(JdbcOperations.class)   // "only if the user hasn't made one"</code></pre>
+
+<div class="box bug"><span class="t">This cost us hours, and it is a genuinely great interview story</span>
+<p>We declared an admin <code>JdbcTemplate</code> for cross-tenant system work. Spring Boot saw a
+<code>JdbcOperations</code> bean already existed and <b>silently stopped creating the normal one</b>.</p>
+<p>Result: every controller and service got the <b>privileged</b> template. Row-level security worked perfectly at
+the database level and applied to nothing, because no application query ever reached it.</p>
+<p><b>Adding a bean removed another one.</b> No warning. The app started fine. The tests passed. Only an
+end-to-end check with two real tenants exposed it.</p>
+<p>The fix: declare the normal one explicitly and mark it <code>@Primary</code>.</p></div>
+
+<h2>4.4 Proxies — the trap in @Async, @Transactional and @Cacheable</h2>
+<p>How does <code>@Transactional</code> actually start a transaction? Spring <b>wraps your bean in a proxy</b> — a
+stand-in object that looks identical from outside but does extra work before and after each call.</p>
+
+<div class="analogy"><span class="t">Analogy — the receptionist</span>
+<p>A receptionist sits outside your office. Visitors from <b>outside</b> must pass them, and the receptionist says
+<i>"he's busy — I'll put this in his inbox for later"</i> (that is the async behaviour).</p>
+<p>But if you are <b>already inside</b> the office and walk to the next desk, you never pass the receptionist. You
+just interrupt that person directly — <b>synchronously</b>.</p></div>
+
+<pre><code>class Service {
+    void submit() {
+        this.process();      // ← runs RIGHT NOW. @Async is silently ignored.
+    }
+    @Async
+    void process() { /* long work */ }
+}</code></pre>
+
+<div class="box warn"><span class="t">Nothing warns you</span>
+<p>It compiles, the annotation is right there, and it simply is not async. That is why
+<code>IngestionWorker</code> is a <b>separate bean</b> — the call comes from outside, so it passes the proxy.</p>
+<p><b>The same trap applies to <code>@Transactional</code> and <code>@Cacheable</code>.</b> This is one of the most
+common Spring interview questions.</p></div>
+
+<h2>4.5 Building a REST API</h2>
+<pre><code>@RestController
+public class MdrController {
+
+    @GetMapping("/api/mdr")
+    public MdrResult calculate(
+            @RequestParam long amountPaise,
+            @RequestParam TxnType txnType,          // Spring converts String → enum
+            @RequestParam PaymentRail rail,
+            @RequestParam PayeeCategory payeeCategory) {
+        return calculator.calculate(new MdrInput(amountPaise, txnType, rail, payeeCategory));
+    }
+}</code></pre>
+
+<table>
+<tr><th style="width:26%">Annotation</th><th>Reads from</th><th>Example</th></tr>
+<tr><td><code>@RequestParam</code></td><td>query string</td><td><code>?amountPaise=300000</code></td></tr>
+<tr><td><code>@PathVariable</code></td><td>the URL path</td><td><code>/api/disputes/<b>{id}</b></code></td></tr>
+<tr><td><code>@RequestBody</code></td><td>the request body (JSON)</td><td>the login form</td></tr>
+<tr><td><code>@GetMapping</code></td><td>GET — "give me something"</td><td>safe, repeatable</td></tr>
+<tr><td><code>@PostMapping</code></td><td>POST — "do something"</td><td>changes state</td></tr>
+</table>
+
+<div class="box"><span class="t">Why /api/ingest cannot be tested in the browser address bar</span>
+<p>Typing a URL always sends a <b>GET</b>. Ingestion is a <b>POST</b> because it changes state, so the browser gets
+<code>405 Method Not Allowed</code>. That is why <code>/api/mdr</code> works in a browser and
+<code>/api/ingest</code> needs curl.</p></div>
+
+<h3>How a Java object becomes JSON</h3>
+<pre><code>@RestController  =  @Controller + @ResponseBody
+                                      │
+                    "do not treat my return value as a page name —
+                     serialise it into the response body"
+                                      │
+                    Spring picks an HttpMessageConverter → Jackson
+                                      │
+                    reads the record's accessors mdrPaise() and ruleId()
+                                      │
+                    {"mdrPaise":1200,"ruleId":"STANDARD_0P4_CAPPED"}</code></pre>
+<p>You write no conversion code because Spring Boot auto-configured it the moment Jackson appeared on the
+classpath. <b>That is "convention over configuration" again</b> — the same idea from Maven, now in Spring.</p>
+
+<h3>Records — Java's data holders</h3>
+<pre><code>public record MdrResult(long mdrPaise, String ruleId) { }</code></pre>
+<p>Replaces about 50 lines: fields, constructor, getters, <code>equals</code>, <code>hashCode</code>,
+<code>toString</code>. Immutable by default, which is exactly right for money.</p>
+
+<h2>4.6 Error handling — status codes carry meaning</h2>
+<pre><code>@RestControllerAdvice          // applies to EVERY controller
+public class ApiExceptionHandler {
+
+    @ExceptionHandler(UnspecifiedRuleException.class)
+    @ResponseStatus(HttpStatus.NOT_IMPLEMENTED)      // 501
+    public Map&lt;String,String&gt; handleUnspecifiedRule(UnspecifiedRuleException e) {
+        return Map.of("error", "RULE_NOT_SPECIFIED", "message", e.getMessage());
+    }
+}</code></pre>
+
+<table>
+<tr><th style="width:16%">Status</th><th>Means</th><th>Where we use it</th></tr>
+<tr><td><b>200</b></td><td>here is your result</td><td>a computed MDR</td></tr>
+<tr><td><b>201</b></td><td>created</td><td>register a workspace</td></tr>
+<tr><td><b>202</b></td><td><b>accepted, not done</b></td><td>file upload queued</td></tr>
+<tr><td><b>400</b></td><td>your request was malformed</td><td>negative amount, bad enum</td></tr>
+<tr><td><b>401</b></td><td><b>we don't know who you are</b></td><td>no or invalid token</td></tr>
+<tr><td><b>403</b></td><td><b>we know you, you may not</b></td><td>another tenant's row</td></tr>
+<tr><td><b>409</b></td><td>conflicts with current state</td><td>illegal dispute transition</td></tr>
+<tr><td><b>422</b></td><td>understood, forbidden by a rule</td><td>claiming an undercharge</td></tr>
+<tr><td><b>501</b></td><td>we genuinely cannot serve this</td><td>education rate not published</td></tr>
+<tr><td><b>503</b></td><td>at capacity, retry</td><td>ingestion pool full</td></tr>
+</table>
+
+<div class="box why"><span class="t">Why 501 and not 500 for an unknown rule</span>
+<p><b>500 means "we are broken."</b> But we are not — we deliberately refuse to invent a rate the regulator never
+published. Correct behaviour reported as a crash.</p>
+<p>A customer seeing 500 files a bug report. A customer seeing <code>501 {"error":"RULE_NOT_SPECIFIED"}</code>
+understands the gap is in the <i>regulation</i>, not your software. Same outcome, completely different trust.</p></div>
+
+<div class="box why"><span class="t">401 vs 403 — a distinction most APIs get wrong</span>
+<p>Spring Security's <i>default</i> answers <b>403</b> to a caller with no credentials at all. That is the wrong
+distinction: a client cannot tell <i>"log in again"</i> from <i>"you lack permission"</i> if both are 403.
+We configured an entry point returning 401.</p></div>
+
+<h2>4.7 Data access — JdbcTemplate <i>and</i> JPA</h2>
+<table>
+<tr><th style="width:28%"></th><th>JPA / Hibernate</th><th>JdbcTemplate</th></tr>
+<tr><td>Built for</td><td>a graph of mutable domain objects with a lifecycle</td><td>plain SQL</td></tr>
+<tr><td>Per-row overhead</td><td>high (persistence context grows)</td><td>minimal</td></tr>
+<tr><td>Good for</td><td>CRUD on rich entities</td><td>bulk writes, reporting queries</td></tr>
+</table>
+<div class="box why"><span class="t">We chose JdbcTemplate for the event log deliberately</span>
+<p>These rows are <b>immutable facts written once and never updated</b>. An ORM would add per-row overhead
+<i>and</i> a persistence context that grows with the file — reintroducing the exact memory problem streaming had
+just solved.</p>
+<blockquote>Use an ORM for domain objects with a lifecycle. Use plain SQL for bulk immutable writes.</blockquote>
+<p>Knowing when <i>not</i> to reach for the framework is the senior signal.</p></div>
+
+<h3>Batching, and a free 28%</h3>
+<pre><code>jdbc.batchUpdate(INSERT_EVENT, buffer);   // 1,000 rows per round trip</code></pre>
+<p>Then one connection-string parameter, no code change:</p>
+<pre><code>jdbc:postgresql://localhost:5432/reconpilot?reWriteBatchedInserts=true</code></pre>
+<table>
+<tr><th>2,000,000 rows</th><th>Time</th><th>Rows/sec</th></tr>
+<tr><td>JDBC batching</td><td>70.8 s</td><td>~28,000</td></tr>
+<tr><td>+ <code>reWriteBatchedInserts</code></td><td><b>51.0 s</b></td><td><b>~39,000</b></td></tr>
+</table>
+<p>The driver collapses a batch into one multi-row <code>INSERT</code> instead of N single-row ones.
+<b>Measured, not assumed</b> — that is the habit worth keeping.</p>
+
+<h2>4.8 Configuration</h2>
+<pre><code>reconpilot.jwt.secret=${RECONPILOT_JWT_SECRET:local-development-secret-...}
+reconpilot.claims.filing-enabled=false</code></pre>
+<p><code>${VAR:default}</code> reads an environment variable and falls back. That is how a secret stays out of the
+repository while local development still works.</p>
+<pre><code>@Value("${reconpilot.claims.filing-enabled:false}") boolean filingEnabled   // one value
+@ConfigurationProperties("app.datasource.admin")                            // a whole group</code></pre>
+
+<h2>4.9 Asynchronous work and bounded capacity</h2>
+<pre><code>@Bean("ingestionExecutor")
+public ThreadPoolTaskExecutor ingestionExecutor() {
+    var ex = new ThreadPoolTaskExecutor();
+    ex.setCorePoolSize(2);
+    ex.setMaxPoolSize(4);
+    ex.setQueueCapacity(10);
+    ex.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+    return ex;
+}</code></pre>
+
+<div class="analogy"><span class="t">Analogy — the restaurant</span>
+<p>2 cooks normally, up to 4 when busy, 10 seats in the waiting area.</p>
+<p><b>No limit on cooks</b> → hire one per order → 10,000 cooks → the restaurant collapses.<br>
+<b>No limit on seats</b> → accept every booking forever → the building falls down. This one is nastier, because it
+<i>looks</i> fine for hours, then dies of an OutOfMemoryError far from the actual cause.</p></div>
+
+<div class="box warn"><span class="t">A genuine surprise in ThreadPoolTaskExecutor</span>
+<p>It fills the <b>queue before</b> hiring extra threads:</p>
+<pre><code>2 threads busy  →  next tasks go on the queue (up to 10)
+queue full      →  NOW create threads 3 and 4</code></pre>
+<p>Most people assume it grows the pool first. It does not. So with a 10-slot queue, thread 4 does not appear until
+12 tasks are outstanding.</p></div>
+
+<div class="box why"><span class="t">AbortPolicy, not CallerRunsPolicy</span>
+<p><b>CallerRuns</b> hands the work back to the <i>HTTP thread</i> — silently restoring the synchronous behaviour we
+removed, at the exact moment the system is busiest. The counter stops being served entirely.</p>
+<p><b>Abort</b> surfaces overload honestly as <b>503</b> and lets the client retry. Measured: 16 concurrent uploads
+against a capacity of 14 produced exactly <b>14 accepted, 2 rejected</b>. That is <b>backpressure</b> — a system
+that knows its own limit and says so.</p></div>
+
+<h2>4.10 Spring Security and JWT</h2>
+<h3>What a JWT actually is</h3>
+<p>Three base64 segments: a header, a payload of claims, and a signature over the first two.</p>
+<div class="box warn"><span class="t">The payload is encoded, not encrypted</span>
+<p>Anyone holding the token can read it. What the signature guarantees is that nobody has <b>changed</b> it without
+the secret. So a token may carry an id and a role, and <b>must never carry a secret</b>.</p></div>
+
+<div class="analogy"><span class="t">Analogy — sessions vs tokens</span>
+<p><b>Session id</b> = a cloakroom ticket. The number means nothing by itself; the cloakroom must remember which
+coat it maps to. Every attendant needs the same list.</p>
+<p><b>JWT</b> = a signed, tamper-evident boarding pass. Everything needed is printed on it, and the signature proves
+it is genuine. Any gate can check it with no lookup and no shared store.</p>
+<p>The cost: a boarding pass cannot be un-issued. Until it expires it stays valid, even if the passenger is banned —
+which is why expiry is short and instant revocation needs a denylist on top.</p></div>
+
+<h3>Password hashing</h3>
+<pre><code>@Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }</code></pre>
+<p><b>BCrypt, never SHA-256 or MD5.</b> Fast hashes are the wrong tool for passwords <i>precisely because they are
+fast</i> — a GPU tries billions of guesses per second. BCrypt is deliberately slow, its cost is tunable upward as
+hardware improves, and it <b>salts</b> each password so two users with the same password get different hashes,
+which defeats precomputed rainbow tables.</p>
+
+<h3>The filter chain</h3>
+<pre><code>.csrf(csrf -&gt; csrf.disable())                       // no cookies = no CSRF vector
+.sessionManagement(s -&gt; s.sessionCreationPolicy(STATELESS))
+.authorizeHttpRequests(auth -&gt; auth
+    .requestMatchers("/api/auth/**").permitAll()
+    .requestMatchers("/actuator/health").permitAll()
+    .anyRequest().authenticated())                  // DEFAULT DENY
+.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);</code></pre>
+
+<div class="box why"><span class="t">Default deny</span>
+<p><code>anyRequest().authenticated()</code> means a new endpoint is <b>protected because nobody remembered to open
+it</b>, rather than exposed because nobody remembered to close it. Always order your rules that way.</p></div>
+
+<h3>Two security details worth stating in an interview</h3>
+<ul>
+<li><b>The tenant comes from the signed token, never from a parameter.</b> A <code>?tenantId=</code> parameter
+would let anyone read anyone's data by editing a URL — among the most common multi-tenant vulnerabilities there is.</li>
+<li><b>Unknown email and wrong password return the same 401.</b> Distinguishing them turns the login form into a way
+to discover which email addresses have accounts.</li>
+</ul>
+
+<h3>ThreadLocals and why they must be cleared</h3>
+<pre><code>try {
+    // ... establish tenant from token, handle request
+} finally {
+    TenantContext.clear();
+    SecurityContextHolder.clearContext();
+}</code></pre>
+<p>Request threads are <b>pooled and reused</b>. A tenant left in a ThreadLocal becomes the <i>next</i> request's
+tenant — a cross-tenant leak arising from thread reuse rather than from any mistake in business logic.</p>
+<div class="box warn"><span class="t">A ThreadLocal does not cross a thread boundary</span>
+<p>The ingestion worker runs on a <i>pool</i> thread, where the request thread's ThreadLocal is simply absent.
+That is why the tenant id is passed to it as an explicit parameter and re-established at the start of the task.</p></div>
+
+<h2>4.11 Actuator</h2>
+<pre><code>management.endpoints.web.exposure.include=health,info</code></pre>
+<p><code>/actuator/health</code> returns <code>{"status":"UP"}</code> and is what a load balancer or Kubernetes
+polls to decide whether to send you traffic. Expose deliberately: the full set includes endpoints that dump
+configuration and environment variables.</p>
+
+<h2>4.12 Reading a Spring Boot startup log</h2>
+<pre><code>Starting BackendApplication using Java 21.0.12.1     ← which JDK
+Bootstrapping Spring Data JPA repositories           ← scanning for @Repository
+Found 0 JPA repository interfaces                    ← we have none. Correct.
+Tomcat initialized with port 8080                    ← the web server
+HikariPool-1 - Added connection                      ← DB connection pool opened
+Successfully validated 1 migration                   ← Flyway checked
+Database version: 17.11                              ← Postgres in the container
+Started BackendApplication in 1.317 seconds          ← ready</code></pre>
+
+<h1>5 · Testing</h1>
+<p class="lead">87 tests. But the number is not the point — three of them were verified to <i>fail</i> against the
+original bugs, and that is what makes them worth having.</p>
+
+<h2>5.1 Unit vs integration — and why the split is real</h2>
+<table>
+<tr><th style="width:24%"></th><th>Unit test</th><th>Integration test</th></tr>
+<tr><td>Touches</td><td>one class, no framework</td><td>real database, real Spring context</td></tr>
+<tr><td>Speed</td><td><b>0.001–0.02 s</b></td><td>0.5–3 s</td></tr>
+<tr><td>Needs Docker</td><td>no</td><td>yes</td></tr>
+<tr><td>Our naming</td><td><code>*Test</code></td><td><code>*IT</code></td></tr>
+<tr><td>Run by</td><td>Surefire (<code>mvn test</code>)</td><td>Failsafe (<code>mvn verify</code>)</td></tr>
+</table>
+
+<div class="box bug"><span class="t">I wrote tests that could never run</span>
+<p>The build was green at 35 tests. <code>IngestionIT</code> and <code>ReconciliationIT</code> <b>compiled and were
+silently skipped.</b></p>
+<p>Maven Surefire only runs classes matching <code>*Test</code>, <code>Test*</code> or <code>*Tests</code>. Anything
+ending <code>IT</code> is conventionally an <i>integration</i> test, handled by the <b>Failsafe</b> plugin — which
+was not configured.</p>
+<p><b>A green build told me nothing, because the tests I cared about never executed.</b> Nothing warns you.</p></div>
+
+<pre><code>./mvnw test      → 52 unit tests, seconds, no Docker      (fast feedback)
+./mvnw verify    → + 35 integration tests                 (the full check)</code></pre>
+
+<div class="box bug"><span class="t">A "unit test" that needed Docker</span>
+<p>Spring Initializr generates <code>BackendApplicationTests</code>, which starts the entire application — and
+therefore a database container. But the <code>*Tests</code> name put it in the fast phase, so
+<code>mvn test</code> required Docker.</p>
+<blockquote>A test that needs a database is not a unit test.</blockquote>
+<p>Renamed to <code>ApplicationContextIT</code> so Failsafe runs it. Now <code>mvn test</code> genuinely needs
+nothing.</p></div>
+
+<h2>5.2 Testcontainers — a real database, thrown away</h2>
+<pre><code>@Bean @ServiceConnection
+PostgreSQLContainer postgresContainer() {
+    return new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"));
+}</code></pre>
+<p>Starts a genuine PostgreSQL in Docker on a random port, runs your migrations against it, and destroys it
+afterwards. Your tests never depend on the state of your dev database, and never corrupt it.</p>
+<p><b>Ryuk</b> is a small janitor container Testcontainers runs to clean up if your test crashes. On Colima it needs
+the socket path <i>as seen from inside the VM</i>, which is why
+<code>TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock</code> exists — a concrete example of the
+container/host boundary being real.</p>
+
+<h2>5.3 The test that destroyed a database</h2>
+<div class="box bug"><span class="t">This is the most important lesson in the chapter</span>
+<p><code>@ServiceConnection</code> only overrides <code>spring.datasource.*</code>. Our hand-rolled
+<code>app.datasource.admin.*</code> kept pointing at <code>localhost:5432/reconpilot</code> — <b>the real
+development database</b> — and <code>clearDatabase()</code> ran <code>TRUNCATE ... CASCADE</code> against
+1,000,000 rows of real data.</p>
+<blockquote>A test suite that can reach your development database will eventually destroy it. Not might — will.</blockquote>
+<p>There was a second cause underneath: <b>replacing Spring Boot's auto-configured DataSource with a hand-built one
+silently disconnects <code>@ServiceConnection</code> entirely</b>, because Testcontainers contributes a
+<code>JdbcConnectionDetails</code> bean that only the <i>auto-configured</i> DataSource consumes.</p></div>
+
+<h3>The fix, in two layers</h3>
+<pre><code>// 1. point every datasource at the container
+registry.add("app.datasource.admin.url", postgres::getJdbcUrl);
+registry.add("spring.flyway.url",        postgres::getJdbcUrl);
+
+// 2. refuse to run against anything else
+if (!url.equals(postgres.getJdbcUrl())) {
+    throw new IllegalStateException("Refusing to run: not the test container");
+}</code></pre>
+<blockquote>A destructive operation should verify what it is about to destroy, rather than trust that the wiring is
+right.</blockquote>
+<p>Verified with a canary row in the dev database that survived a full suite run.</p>
+
+<h2>5.4 Test-first, and why it actually matters</h2>
+<p>We wrote the MDR tests from the regulator's published figures <b>before</b> the calculator existed. One failed:</p>
+<pre><code>capBindsExactlyAtSeventyFiveThousand
+  "below Rs 75,000 the percentage governs" ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;</code></pre>
+<p>₹74,999 × 0.4% = ₹299.996, which <b>HALF_UP rounds to ₹300</b> — exactly the cap. My assumption was wrong; the
+code was right.</p>
+
+<div class="box why"><span class="t">Why writing the test first mattered here</span>
+<p>Had I written the code first and the test after, I would have run the calculator, seen ₹300, thought
+<i>"right, that's what it does"</i>, and asserted ₹300. <b>The test would have passed and taught me nothing.</b></p>
+<blockquote>Tests written after the code tend to encode the code's behaviour rather than the requirement — so they
+lock in bugs instead of catching them.</blockquote>
+<p>It also found something real: the percentage and the cap <b>interact through the rounding mode</b>. Nobody could
+predict that by reading the regulation.</p></div>
+
+<h2>5.5 Validating a detection engine — plant known errors</h2>
+<p>You cannot validate a detection engine against data whose correct answer you do not know. Every output looks
+equally plausible. So the test file is generated with a <b>known number of deliberately corrupted rows</b>.</p>
+<table>
+<tr><th>Break type</th><th>Planted</th><th>Found</th></tr>
+<tr><td>CHARGED_WHEN_EXEMPT</td><td>1,500</td><td><b>1,500</b></td></tr>
+<tr><td>CAP_BREACHED</td><td>800</td><td><b>800</b></td></tr>
+<tr><td>OVERCHARGED</td><td>3,000</td><td><b>3,000</b></td></tr>
+<tr><td>UNDERCHARGED</td><td>2,000</td><td><b>2,000</b></td></tr>
+<tr><td><b>Total</b></td><td><b>7,300</b></td><td><b>7,300</b></td></tr>
+</table>
+
+<div class="box why"><span class="t">The generator was an INDEPENDENT implementation, and that was the point</span>
+<p>The expected answers were computed in Python, by hand — not by calling the Java code.</p>
+<p>The first run found <b>15,474</b> breaks instead of 7,300. All 8,174 extras were capital-markets rows off by
+<b>exactly one paise</b>: the generator truncated (66.66 → 66) where the calculator rounds HALF_UP (66.66 → 67).</p>
+<blockquote>A test that asks the code whether the code is right is a tautology.</blockquote>
+<p>Had the expectations been generated from <code>MdrCalculator</code>, the test would have passed perfectly and
+proved nothing.</p></div>
+
+<h2>5.6 A regression test must be seen to fail</h2>
+<p>We put both original bugs <b>back</b> and ran the tests:</p>
+<pre><code>Bug: check-then-act merchant creation restored
+  → concurrentBatchesSharingMerchantsDoNotCollide  FAILED: DuplicateKeyException ✓
+
+Bug: rejection leaves the batch row restored
+  → rejectionLeavesNoTraceSoTheFileCanStillBeIngested
+    FAILED: "a refused request must leave no trace" expected: &lt;0&gt; but was: &lt;1&gt; ✓</code></pre>
+<p>Then restored both fixes — <code>git diff</code> confirmed byte-identical.</p>
+<blockquote>A regression test that has never failed is a hypothesis, not a test. You have <i>asserted</i> it catches
+the bug. Until you watch it catch the bug, you do not know.</blockquote>
+
+<h2>5.7 JUnit essentials</h2>
+<pre><code>@Test                          a test method
+@BeforeEach / @AfterEach       run before/after EVERY test
+@Nested                        group related tests, with their own @DisplayName
+@DisplayName("...")            a readable name in the report
+@ParameterizedTest             run the same test with many inputs
+@CsvSource({"3000, 12"})       supply those inputs inline
+
+assertEquals(expected, actual, "message shown on failure")
+assertThrows(SomeException.class, () -> code())
+assertDoesNotThrow(() -> code())</code></pre>
+
+<div class="box"><span class="t">A completeness test worth copying</span>
+<pre><code>@ParameterizedTest
+@EnumSource(DisputeStatus.class)
+void everyStateDeclaresItsTransitions(DisputeStatus s) {
+    assertNotNull(s.allowedNext(), s + " has no transition entry");
+}</code></pre>
+<p>Add a state to the enum without declaring its transitions and this fails immediately — rather than throwing a
+NullPointerException on whichever unlucky production request meets it first.</p></div>
+
+<h1>6 · React and TypeScript</h1>
+<p class="lead">Three screens, one design system, and a state layer that is Redux without the misery.</p>
+
+<h2>6.1 Vite — the build tool</h2>
+<p>Vite serves your source directly to the browser during development using native ES modules, so a change appears
+almost instantly (<b>hot module replacement</b>) rather than rebuilding a bundle. For production it bundles properly.</p>
+<pre><code>npm run dev      development server on :5173, hot reload
+npm run build    type-check + production bundle into dist/
+npm run preview  serve the production build locally</code></pre>
+
+<h2>6.2 CORS, and why we avoided it entirely</h2>
+<div class="box why"><span class="t">What CORS actually is</span>
+<p>Your React app runs at <code>localhost:5173</code>. Your API is at <code>localhost:8080</code>. To a browser those
+are <b>different origins</b>, and it will refuse the request unless the server explicitly opts in with CORS headers.</p>
+<p>This is a browser safety rule, not a server one — <code>curl</code> is unaffected, which is why an API can work
+perfectly in a terminal and fail in a browser.</p></div>
+
+<pre><code>server: {
+  proxy: { '/api': { target: 'http://localhost:8080', changeOrigin: true } }
+}</code></pre>
+<p>Now the browser sees <b>one origin</b>, so the problem does not arise. And it mirrors production, where a single
+reverse proxy serves both. <b>Sidestepping a problem is often better than configuring around it.</b></p>
+
+<h2>6.3 Components, props and hooks</h2>
+<p>A component is a function that returns markup. Props are its inputs.</p>
+<pre><code>function StatCard({ label, value, loading }: Props) {
+  return &lt;Paper&gt;{loading ? &lt;Skeleton/&gt; : value}&lt;/Paper&gt;
+}</code></pre>
+<table>
+<tr><th style="width:24%">Hook</th><th>What it does</th></tr>
+<tr><td><code>useState</code></td><td>local state that triggers a re-render when it changes</td></tr>
+<tr><td><code>useEffect</code></td><td>run a side effect after render</td></tr>
+<tr><td><code>useSelector</code></td><td>read a value from the Redux store</td></tr>
+<tr><td><code>useDispatch</code></td><td>send an action to the store</td></tr>
+<tr><td><code>useParams</code></td><td>read <code>:id</code> from the URL</td></tr>
+<tr><td><code>useNavigate</code></td><td>navigate in code</td></tr>
+</table>
+
+<h2>6.4 TypeScript — errors at compile time, not runtime</h2>
+<pre><code>export interface BreakView {
+  id: string
+  breakType: BreakType
+  deltaPaise: number
+  disputeId: string | null      // explicitly nullable
+}</code></pre>
+<p>Mistype <code>b.deltPaise</code> and the build fails, rather than rendering <code>undefined</code> to a user.
+Our <code>types.ts</code> mirrors the backend records by hand, so a backend change surfaces as a compile error
+rather than as a blank screen.</p>
+
+<h2>6.5 Redux Toolkit and RTK Query</h2>
+<div class="box why"><span class="t">Why plain Redux has a bad reputation</span>
+<p>Hand-written, one API call needs an action, a reducer and three state flags (loading, error, data). Times every
+endpoint. That boilerplate is most of why people dislike Redux.</p>
+<p><b>RTK Query is Redux's own data-fetching layer.</b> You declare endpoints; it generates typed hooks, a
+normalised cache, loading and error state, and refetching.</p></div>
+
+<pre><code>createDispute: build.mutation({
+  query: ({ breakId }) => ({ url: '/disputes', method: 'POST', params: { breakId } }),
+  invalidatesTags: ['Break', 'Dispute'],      // ← the clever part
+})</code></pre>
+<p><b>Raise a claim and both the break queue and the dashboard refresh</b> — neither of them knowing a claim was
+raised. That is tag-based cache invalidation.</p>
+
+<div class="box why"><span class="t">Server state and client state are different things</span>
+<p><b>RTK Query</b> owns what the backend says. A small <code>uiSlice</code> owns what <i>this browser</i> is
+currently doing — the active filter, the toast. Mixing them is how caches go stale and filters vanish on refetch.</p></div>
+
+<h3>The token, attached in one place</h3>
+<pre><code>prepareHeaders: (headers, { getState }) =&gt; {
+  const token = (getState() as RootState).auth.token
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  return headers
+}</code></pre>
+<p>Doing this per call is how one endpoint ends up unauthenticated and nobody notices. And a base-query wrapper
+signs the user out on <i>any</i> 401 — since a JWT cannot be un-issued, an ordinary call failing is the first sign
+it is no longer good.</p>
+
+<h2>6.6 Material UI — one design system, not two</h2>
+<div class="box warn"><span class="t">Why we did not also use Bootstrap</span>
+<p>They are <b>two complete, competing design systems</b>. Each ships its own CSS reset, grid, typography scale,
+spacing scale and components. Using both means conflicting resets, a Bootstrap button sitting next to a Material
+button looking like two different apps, ~250 KB you do not use, and a constant low-grade decision:
+<i>"is this a Bootstrap card or a Material card?"</i></p>
+<p>That is the <i>crowded</i> outcome, not the advanced one. It also reads to an interviewer as <i>"did not decide"</i>.</p></div>
+<p>With one system, consistency becomes a property of <b>the configuration</b> rather than of each developer's
+discipline. Every colour, radius and font lives in <code>theme.ts</code>.</p>
+
+<h3>MUI v9 gotcha</h3>
+<p>System props were removed from <code>Stack</code> and <code>Typography</code>; layout now goes through
+<code>sx</code>. The compiler errors are long and not obvious:</p>
+<pre><code>&lt;Stack direction="row" flexWrap="wrap"&gt;                    ✗ v9
+&lt;Stack direction="row" sx={{ flexWrap: 'wrap' }}&gt;          ✓</code></pre>
+
+<h2>6.7 The client mirrors the state machine but is not the authority</h2>
+<pre><code>{ALLOWED_NEXT[claim.status].map(target =&gt; &lt;Button&gt;{target}&lt;/Button&gt;)}</code></pre>
+<blockquote>A UI that hides a button has made an action inconvenient, not impossible. Anyone with curl can still
+try it.</blockquote>
+<p>Client-side validation is for <b>convenience</b>; server-side is for <b>correctness</b>. Getting that backwards
+is a genuine security bug. The backend still answers 409 for anything illegal.</p>
+
+<h1>7 · System design</h1>
+<p class="lead">These ideas outlive the frameworks. They are what an interviewer is actually probing for.</p>
+
+<h2>7.1 The six-step framework</h2>
+<p>Every system design interview is the same six steps. Most candidates fail by jumping straight to step 5.</p>
+<pre><code>1. Requirements      What must it do? What must it GUARANTEE?
+2. Scale estimation  How big is this, actually? (do the arithmetic out loud)
+3. Data model        What are the nouns, and how do they relate?
+4. API design        How does the outside world talk to it?
+5. Architecture      What are the boxes and arrows?
+6. Deep dive         Attack the hardest part</code></pre>
+
+<h3>Functional vs non-functional</h3>
+<p>Juniors list features. Seniors list <b>guarantees</b>.</p>
+<table>
+<tr><th style="width:24%">Requirement</th><th>What it meant here</th></tr>
+<tr><td><b>Correctness</b></td><td>Paisa-exact. A wrong number destroys customer trust instantly.</td></tr>
+<tr><td><b>Auditability</b></td><td>Every figure reproducible and explainable months later.</td></tr>
+<tr><td><b>Idempotency</b></td><td>Uploading the same file twice must not double-count.</td></tr>
+<tr><td><b>Determinism</b></td><td>Same inputs → same outputs, in any arrival order.</td></tr>
+<tr><td><b>Tenant isolation</b></td><td>Merchant A must never see Merchant B's data.</td></tr>
+<tr><td>Availability</td><td><i>Low priority.</i> Two hours down and nobody dies.</td></tr>
+<tr><td>Latency</td><td><i>Low priority.</i> This is batch work, not a payment gateway.</td></tr>
+</table>
+
+<div class="box why"><span class="t">Ranking two requirements LOW is the most important move</span>
+<p>A candidate who says <i>"it must be highly available, low latency, strongly consistent and infinitely
+scalable"</i> has said nothing.</p>
+<blockquote>You cannot optimise for everything. Design is choosing what to sacrifice.</blockquote>
+<p>Saying <i>"I traded availability for correctness, because this is financial reconciliation and a wrong number
+costs more than an outage"</i> demonstrates judgement — which is the thing being tested.</p></div>
+
+<h2>7.2 Back-of-envelope estimation</h2>
+<pre><code>1,000 merchants × 1,000 transactions/month = 1,000,000/month = 12,000,000/year
+
+average write rate  = 1,000,000 ÷ (30 × 86,400) ≈ 0.4 writes/second
+peak (1M in 1 hour) = 1,000,000 ÷ 3,600          ≈ 280 writes/second
+storage             ≈ 5.5 GB/year (measured, including indexes)</code></pre>
+
+<div class="box why"><span class="t">Read those numbers and stop</span>
+<p><b>0.4 writes per second.</b> A single PostgreSQL instance handles this without effort, for years. No sharding.
+No microservices. No Kubernetes. No read replicas.</p>
+<blockquote>This is not a scale problem. It is a correctness problem.</blockquote>
+<p>Ask a junior to design this and you get microservices, Kafka everywhere and a service mesh — architecture
+cargo-culted from blog posts about Netflix. Netflix has that architecture because Netflix streams to 300 million
+people. You have 0.4 writes per second.</p>
+<p><b>Complexity is a budget. Spend it where the difficulty actually is.</b></p></div>
+
+<h2>7.3 Memory must be independent of input size</h2>
+<p>Measured on a 148 MB, 2,000,000-row CSV with the heap capped:</p>
+<table>
+<tr><th>Heap</th><th>Read whole file</th><th>Stream it</th></tr>
+<tr><td>256 MB</td><td>251 MB used — <b>survived by 5 MB</b></td><td>65 MB</td></tr>
+<tr><td>128 MB</td><td><b>OutOfMemoryError</b></td><td>80 MB</td></tr>
+<tr><td>96 MB</td><td><b>OutOfMemoryError</b></td><td>24 MB</td></tr>
+<tr><td>32 MB</td><td>—</td><td><b>23 MB, still worked</b></td></tr>
+</table>
+<p>Reading it whole costs ~2.7× the file size, because each line becomes a <code>String</code> object carrying
+about 40 bytes of overhead on top of its characters. <b>A 148 MB file becomes ~400 MB of Java objects.</b></p>
+
+<div class="box warn"><span class="t">The 256 MB row is the dangerous one</span>
+<p>It <b>worked</b>. 251 of 256. It would have passed tests, passed review, shipped, and run fine for months. Then
+the file grows, and one night it dies — at 3 a.m., on your largest customer's largest file, which is exactly when
+the data matters most.</p>
+<blockquote>A bridge that has held every truck you have driven over it is not rated for anything. It is
+untested.</blockquote>
+<p>The principle: memory use must be <b>O(1)</b>, not O(n). <i>"It works on my test file"</i> is not a capacity
+statement.</p></div>
+
+<h2>7.4 Idempotency</h2>
+<div class="analogy"><span class="t">Analogy</span>
+<p>Pressing a lift button five times does not summon five lifts. The <b>first</b> press changes the state; the rest
+are no-ops. That is idempotency.</p></div>
+<p>It matters because networks retry. A client sends a request, the response is lost, the client retries — and
+without idempotency you have ingested the file twice.</p>
+<p>Ours is a SHA-256 of the file bytes under a unique constraint. Enforced by the database, not by an
+<code>if</code>. Three separate places in this project use the same pattern: file ingestion, break creation, and
+dispute creation.</p>
+
+<h2>7.5 Precedence is a contract, not a detail</h2>
+<p>This appeared <b>three times</b> in ReconPilot, which is why it is worth naming.</p>
+<pre><code>1. P2P?                → ₹0
+2. Credit-linked?      → out of scope
+3. AutoPay?            → ₹0
+4. Merchant is P2PM?   → ₹0     ← MUST come before the amount check
+5. Amount ≤ ₹2,000?    → ₹0
+6. Otherwise by category</code></pre>
+<div class="box why"><span class="t">Specificity is not precedence</span>
+<p>Given a ₹2,000 AutoPay payment to a fuel merchant who is P2PM, <b>four</b> rules fire. Three say ₹0 and one says
+₹5. The instinct is <i>"the most specific rule wins"</i> — that is how CSS works. Here it is wrong.</p>
+<p>Three rules produce ₹0, so the order looks academic. It is not: <b>we have to explain the number.</b> "₹0 because
+it is AutoPay" and "₹0 because the merchant is P2PM" have different lifespans — if the merchant is reclassified,
+the AutoPay reason survives and the P2PM reason evaporates.</p>
+<blockquote>Which rule fired is as important as what it produced.</blockquote></div>
+
+<h2>7.6 State machines</h2>
+<pre><code>DRAFT ─file→ FILED ─ack→ ACKNOWLEDGED ─accept→ ACCEPTED ─settle→ RECOVERED
+   │            │              │
+   └── withdraw ┴── reject ────┴─→ REJECTED / WITHDRAWN  (terminal)</code></pre>
+<p>The legal transitions live in the enum as <b>data</b>, not as <code>if</code> statements spread through a
+service:</p>
+<pre><code>ALLOWED.put(DRAFT,     EnumSet.of(FILED, WITHDRAWN));
+ALLOWED.put(ACCEPTED,  EnumSet.of(RECOVERED));
+ALLOWED.put(RECOVERED, EnumSet.noneOf(DisputeStatus.class));   // terminal</code></pre>
+<p>Three consequences: the whole lifecycle is readable in one place; adding a state <i>forces</i> you to declare its
+transitions; and an illegal transition becomes <b>impossible by construction</b> rather than merely unlikely.</p>
+<p>The alternative — a mutable <code>status</code> string updated wherever convenient — is how records end up
+RECOVERED without ever having been FILED.</p>
+<p><b>One gate.</b> There is deliberately no <code>/file</code>, <code>/accept</code>, <code>/reject</code> endpoint:
+separate endpoints tempt each to do its own checking, and the fifth one, added in a hurry, forgets a rule the other
+four enforce.</p>
+
+<h2>7.7 Async, 202, and backpressure</h2>
+<pre><code>Client                          Server
+  │  POST /api/ingest             │
+  │ ─────────────────────────────>│  parse 2,000,000 rows
+  │         51 SECONDS            │  insert 2,000,000 rows
+  │      thread blocked           │  ← one HTTP thread held the whole time
+  │ <─────────────────────────────│</code></pre>
+<p>Four things are wrong, and none is about speed:</p>
+<ol>
+<li>Proxies and load balancers time out at 30–60 seconds — the request dies <i>after</i> most of the work.</li>
+<li>The client learns nothing until the end. No id, no progress, nothing to poll.</li>
+<li>A dropped connection strands the batch in <code>PARSING</code> forever.</li>
+<li><b>One upload occupies a request thread for a minute.</b> Tomcat's pool is bounded (200 by default), so a
+handful of concurrent uploads stops the API answering <i>anything</i> — including health checks.</li>
+</ol>
+<p>Point 4 turns a slow feature into an outage. The fix took the response from <b>51,018 ms to 657 ms</b>.</p>
+<div class="box why"><span class="t">202, not 200</span>
+<p><b>200 claims a result the caller does not have.</b> 202 Accepted says "valid, scheduled, not done", with a
+<code>Location</code> header pointing at where the answer will appear. Returning 200 for work that has not happened
+is a lie.</p></div>
+
+<h2>7.8 Caching is not always Redis</h2>
+<pre><code>Map&lt;String, UUID&gt; merchantCache = new HashMap&lt;&gt;();</code></pre>
+<p>2,000,000 rows, 500 distinct merchants. A plain HashMap between the parser and the database eliminated
+<b>99.975%</b> of the lookups. That <i>is</i> caching. No infrastructure required.</p>
+<p>The general shape: <b>identify repeated identical work, do it once, remember the answer.</b> Redis matters when
+the cache must be shared between processes or survive a restart — not before.</p>
+
+<h2>7.9 Concurrency bugs are invisible until you run things concurrently</h2>
+<pre><code>Thread A: SELECT merchant 'shop000@upi'  →  not found
+Thread B: SELECT merchant 'shop000@upi'  →  not found   ← both looked first
+Thread A: INSERT                          →  OK
+Thread B: INSERT                          →  UNIQUE violation → whole batch dies</code></pre>
+<p>Both threads checked honestly. Both got a true answer. The answer simply stopped being true in the gap between
+checking and acting.</p>
+<p><b>2,000,000 rows sequentially: fine. The first concurrent burst: 12 of 14 batches failed.</b></p>
+<blockquote>Any "check, then act" has a gap. If two things can run at once, something will eventually land in it.
+Make it one indivisible step instead.</blockquote>
+
+<h2>7.10 Defence in depth</h2>
+<p>Two independent mechanisms for anything whose failure is catastrophic:</p>
+<table>
+<tr><th style="width:36%">Risk</th><th>Layer 1</th><th>Layer 2</th></tr>
+<tr><td>Cross-tenant data leak</td><td>application filters by tenant</td><td>PostgreSQL row-level security</td></tr>
+<tr><td>Session variable leaking via pool</td><td>set on every checkout</td><td>clear on close</td></tr>
+<tr><td>Duplicate ingestion</td><td>application checks the hash</td><td>unique constraint</td></tr>
+<tr><td>Illegal dispute transition</td><td>UI offers only legal buttons</td><td>server returns 409</td></tr>
+</table>
+<p>In each pair, layer 1 is convenience and layer 2 is correctness. Where the failure is silent and severe, the cost
+of the second layer is trivial compared with the cost of being wrong.</p>
+
+<h1>8 · Every bug, and what it taught</h1>
+<p class="lead">Ten real defects. For an interview, these are worth more than the features.</p>
+
+<h2>8.1 The rounding disaster — 8,174 false claims from one paise</h2>
+<div class="box bug"><span class="t">D7 — the most expensive kind of bug</span>
+<p>The first reconciliation found <b>15,474</b> breaks against 7,300 planted. Every extra one was a capital-markets
+row off by <b>exactly one paise</b>: <code>expected 67, charged 66</code>.</p>
+<p>The generator truncated; the calculator rounds HALF_UP.</p>
+<p>Had those been filed against a real PSP, <b>every single one would have been wrong</b> — and the product's entire
+premise, <i>"our arithmetic is right and yours isn't"</i>, would have died on first contact with a customer.</p>
+<p><b>We predicted this in writing four sessions earlier</b>, in OPEN-QUESTIONS.md: <i>"systematic rounding
+differences will surface as false breaks."</i> That was a hypothesis. 8,174 is a measurement.</p>
+<p>It is now a <b>business control</b>: <code>reconpilot.claims.filing-enabled</code> defaults to
+<code>false</code>, and the error message a user sees explains exactly why.</p></div>
+
+<h2>8.2 Security theatre — RLS enabled and inert</h2>
+<p>Covered in §3.8. The lesson: <b>a security control that is enabled but not enforced is worse than none</b>, because
+it creates false confidence. I wrote the ADR claiming defence in depth, and believed it until I tested it.</p>
+
+<h2>8.3 The test suite that destroyed the dev database</h2>
+<p>Covered in §5.3. <b>A test suite that can reach your development database will eventually destroy it.</b></p>
+
+<h2>8.4 Adding a bean removed another one</h2>
+<p>Covered in §4.3. <code>@ConditionalOnMissingBean</code> means declaring an admin <code>JdbcTemplate</code>
+silently deleted the normal one, routing every query through the privileged connection.</p>
+
+<h2>8.5 A rejected upload poisoned its own retry</h2>
+<div class="box bug"><span class="t">Two correct features, broken by their combination</span>
+<pre><code>POST part05.csv  →  503 INGESTION_BUSY     ← honest, correct
+POST part05.csv  →  200 alreadySeen: true  ← the file can NEVER be ingested</code></pre>
+<p>The batch row was written <i>before</i> the work was queued, so a rejection left it stranded in RECEIVED.
+Idempotency keys on the content hash, so that stranded row made every retry report "already ingested".</p>
+<p><b>An honest rejection turned into silent, permanent data loss.</b> Idempotency is correct. Rejecting when full
+is correct. Together they destroy data.</p>
+<blockquote>When you refuse a request, leave the world exactly as you found it. A refusal that changes state is not
+a refusal.</blockquote></div>
+
+<h2>8.6 The check-then-act race</h2>
+<p>Covered in §7.9. Invisible over 2,000,000 sequential rows; failed 12 of 14 batches on the first concurrent run.</p>
+
+<h2>8.7 Tests that could never run</h2>
+<p>Covered in §5.1. <code>*IT</code> classes compiled and were silently skipped by Surefire.</p>
+
+<h2>8.8 The constraint that contradicted the code</h2>
+<p>Covered in §3.6. We changed the idempotency <i>query</i> to allow retrying FAILED batches, and left the
+<i>constraint</i> alone. The code decided to retry; the database refused.</p>
+<blockquote>The same rule written in two places will eventually be changed in one.</blockquote>
+
+<h2>8.9 The IDE and the build using different JDKs</h2>
+<p>Covered in §1.2. <code>JAVA_HOME</code> in <code>~/.zprofile</code> is invisible to <code>/bin/sh</code>.
+Lombok — which we were not even using — crashed on JDK 27. Removing an unused dependency eliminated a whole class
+of failure rather than pinning around it.</p>
+
+<h2>8.10 The API designed without a consumer</h2>
+<div class="box bug"><span class="t">Found within minutes of writing the first screen</span>
+<p><code>GET /api/breaks</code> returned raw <code>Map&lt;String,Object&gt;</code> — leaking the database's
+snake_case naming into the API — and <b>omitted the break's own id</b>, so a client could display a finding but
+could not act on it.</p>
+<blockquote>An API designed without a consumer is one that technically works and is unusable.</blockquote></div>
+
+<h3>The pattern across all ten</h3>
+<div class="box ok"><span class="t">Not one of these would have been found by reading the code</span>
+<p>Every single one was found by <b>running something and checking a belief</b>: firing 16 concurrent uploads,
+querying the database as a different role, planting known errors, putting a bug back to watch the test fail.</p>
+<p>That is worth saying in an interview more plainly than any feature: <i>"I stress-tested my own system and found
+these; here is what each one taught me."</i></p></div>
+
+<h1>9 · Rebuild it from nothing</h1>
+<p class="lead">Every step, in order, with the reasoning compressed. On a clean Mac this is about a day's work if
+you already understand the concepts in chapters 1–8.</p>
+
+<h2>Step 1 — The machine</h2>
+<pre><code># Homebrew (the one command that needs your password)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+brew install openjdk@21 maven node@24
+brew install colima docker docker-compose
+brew install --cask intellij-idea-ce
+
+# Compose must be registered as a docker CLI plugin
+mkdir -p ~/.docker/cli-plugins
+ln -sfn /opt/homebrew/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose</code></pre>
+
+<p>Then wire the shell — <code>~/.zprofile</code>:</p>
+<pre><code>eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+
+export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"
+export PATH="/opt/homebrew/opt/node@24/bin:$PATH"
+
+# Testcontainers cannot find Colima's socket without these
+export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock</code></pre>
+
+<pre><code>colima start --cpu 4 --memory 6 --disk 60
+java -version && mvn -version && node -v && docker ps</code></pre>
+
+<div class="box warn"><span class="t">Two traps at this stage</span>
+<p><b>1.</b> <code>brew install maven</code> drags in the newest JDK as a dependency. <code>JAVA_HOME</code> is what
+decides which one Maven uses — verify with <code>mvn -version</code>, which prints the runtime it chose.</p>
+<p><b>2.</b> IntelliJ ignores <code>JAVA_HOME</code> and auto-detects. Set the Project SDK explicitly:
+<b>File → Project Structure → Project → SDK → 21</b>, and the same under
+<b>Settings → Build Tools → Maven → Importing</b>.</p></div>
+
+<h2>Step 2 — The stack</h2>
+<p><code>~/projects/reconpilot/docker-compose.yml</code> exactly as in §2.4. Then:</p>
+<pre><code>cd ~/projects/reconpilot
+docker compose up -d
+docker compose ps        # both should read (healthy)</code></pre>
+
+<h2>Step 3 — Design before code</h2>
+<p>This is the step people skip, and it is the one that saved the most time.</p>
+<ol>
+<li><b>Requirements</b>, split into functional and non-functional. Rank two of the non-functionals LOW on purpose.</li>
+<li><b>Scale estimation</b>, out loud, with arithmetic. Ours said <i>0.4 writes/second</i> — which decided the entire
+architecture: one Postgres, a modular monolith, no Kafka.</li>
+<li><b>Read the primary source.</b> We designed a mid-month threshold engine from accurate news summaries. The
+regulator's own FAQ showed the mechanism was an account category with a three-month qualifying period. Had we coded
+first, we would have built the wrong thing and found out during customer disputes.</li>
+<li><b>Write ADRs.</b> One file per decision: context, decision, consequences — including what you gave up.</li>
+</ol>
+
+<div class="box why"><span class="t">Turn the regulation into a decision table, then into tests</span>
+<p>Prose is ambiguous; tests are not. Ours cites the FAQ question each figure came from, so a disputed calculation
+is defended by pointing at the regulator's own document rather than at our code.</p></div>
+
+<h2>Step 4 — The schema</h2>
+<p>Write <code>V1__initial_schema.sql</code>. The non-negotiables:</p>
+<ul>
+<li>All money <code>BIGINT</code> paise, with <code>CHECK (x &gt;= 0)</code>.</li>
+<li><code>occurred_at</code> <b>and</b> <code>recorded_at</code> on the event table.</li>
+<li><code>raw JSONB NOT NULL</code> — keep the source row verbatim.</li>
+<li>Append-only: no UPDATE or DELETE on the event log, ever.</li>
+<li><code>UNIQUE (tenant_id, content_hash)</code> on batches for idempotency.</li>
+<li><code>tenant_id</code> on every tenant-scoped table.</li>
+</ul>
+<p>Leave RLS until Step 10 — it needs authentication to be meaningful, and enabling it early breaks every test for
+no benefit.</p>
+
+<h2>Step 5 — Generate the Spring Boot project</h2>
+<pre><code>curl -fsSL https://start.spring.io/starter.zip \
+  -d type=maven-project -d language=java -d javaVersion=21 \
+  -d groupId=in.reconpilot -d artifactId=backend -d packageName=in.reconpilot \
+  -d dependencies=web,data-jpa,postgresql,validation,flyway,actuator,testcontainers \
+  -o /tmp/backend.zip
+unzip -q /tmp/backend.zip -d ~/projects/reconpilot/backend</code></pre>
+<div class="box warn"><span class="t">Three things to fix immediately in the generated project</span>
+<p><b>1. Do not tick Lombok</b> unless you will use it. It hooks into private compiler internals and breaks on each
+new JDK. We removed it and a whole class of failure disappeared.</p>
+<p><b>2. Rename <code>BackendApplicationTests</code> to <code>ApplicationContextIT</code>.</b> It starts a database
+container, so it is not a unit test.</p>
+<p><b>3. Pin the Testcontainers image</b> to the same version Compose runs. The default is
+<code>postgres:latest</code>.</p></div>
+
+<p>Move the schema to <code>src/main/resources/db/migration/V1__initial_schema.sql</code> and set:</p>
+<pre><code>spring.flyway.enabled=true
+spring.jpa.hibernate.ddl-auto=validate</code></pre>
+
+<h2>Step 6 — The rules engine, test-first</h2>
+<p>Write the tests from the regulator's published figures <b>before</b> the implementation. Then:</p>
+<ul>
+<li>Enums for every dimension (<code>TxnType</code>, <code>PaymentRail</code>, <code>PayeeCategory</code>).</li>
+<li>Records for input and output — and put the <b>rule id</b> in the output, not just the amount.</li>
+<li>One ordered evaluation method. Precedence is the contract.</li>
+<li>Unspecified cases <b>throw</b>. Never guess a rate.</li>
+<li>The rounding mode is a single named constant with a comment explaining it is provisional.</li>
+<li><b>No Spring annotations in this class.</b> Register it as a <code>@Bean</code> in a config class.</li>
+</ul>
+<pre><code>./mvnw test     # should be milliseconds, no Docker</code></pre>
+
+<h2>Step 7 — Expose it, then add a UI for yourself</h2>
+<p>A thin <code>@RestController</code> that converts query parameters, delegates, and returns the record. Then a
+<code>@RestControllerAdvice</code> mapping your domain exceptions to honest status codes (501 for unspecified, 400
+for bad input).</p>
+<p>Add a root endpoint serving a small HTML index of worked examples. It costs twenty minutes and makes every
+subsequent change verifiable by clicking rather than by assembling URLs.</p>
+
+<h2>Step 8 — Ingestion</h2>
+<ol>
+<li><b>Prove the memory problem first.</b> Generate a 150 MB CSV, read it both ways under
+<code>-Xmx128m</code>, and watch one of them die. You will design differently afterwards.</li>
+<li>Parser returns a lazy <code>Stream</code>; hash the file through an 8 KB buffer. Never load it whole.</li>
+<li>Write with <code>JdbcTemplate.batchUpdate</code>, 1,000 rows per flush. Add
+<code>?reWriteBatchedInserts=true</code> to the JDBC URL — free 28%.</li>
+<li><b>One <code>recorded_at</code> per file</b>, computed once.</li>
+<li>Resolve merchants with <code>INSERT ... ON CONFLICT ... RETURNING id</code>, cached in a HashMap. Do not
+check-then-act.</li>
+</ol>
+
+<h2>Step 9 — Make it asynchronous</h2>
+<ul>
+<li>Synchronous part: validate header, hash, check idempotency, insert the batch row, return <b>202</b> with a
+<code>Location</code> header.</li>
+<li>Asynchronous part: a <b>separate bean</b> annotated <code>@Async</code> — self-invocation bypasses the proxy.</li>
+<li>Bound the pool: 2 core, 4 max, queue 10, <code>AbortPolicy</code>. Map the rejection to <b>503</b>.</li>
+<li><b>On rejection, delete the batch row.</b> Otherwise the stranded row poisons every retry.</li>
+<li>Re-establish the tenant inside the worker — a ThreadLocal does not follow work onto a pool thread.</li>
+<li>A startup sweep marks batches left in RECEIVED/PARSING as FAILED, using the <b>admin</b> connection.</li>
+</ul>
+<p>Then <b>fire 16 concurrent uploads</b>. That is how we found two bugs in ten seconds.</p>
+
+<h2>Step 10 — Reconciliation, and validating it honestly</h2>
+<ul>
+<li>Walk the batch in 5,000-row <b>keyset</b> pages (<code>WHERE id &gt; ? ORDER BY id LIMIT n</code>), never OFFSET.</li>
+<li>Index <code>(batch_id, id)</code> to support it.</li>
+<li>Classification precedence: exempt, then cap breach, then overcharge, then undercharge.</li>
+<li>Unique index on <code>recon_break(transaction_event_id)</code> plus <code>ON CONFLICT DO NOTHING</code>, so
+re-running cannot duplicate findings.</li>
+<li>Unspecified rules are <b>counted and skipped</b>, never broken.</li>
+</ul>
+<div class="box why"><span class="t">Validate with planted errors and an independent implementation</span>
+<p>Generate the test file with a known number of deliberately corrupted rows, and compute the expected MDR with a
+<b>second implementation you write by hand</b> — not by calling the code under test. Ours disagreed by one paise and
+exposed 8,174 false breaks.</p></div>
+
+<h2>Step 11 — The dispute workflow</h2>
+<ul>
+<li>Transitions as <b>data</b> in the enum, with a completeness test over <code>@EnumSource</code>.</li>
+<li><b>One</b> transition endpoint, not five.</li>
+<li>Append-only <code>dispute_event</code> table recording actor, note and timestamp.</li>
+<li>Guards that encode business rules: an undercharge cannot be claimed; one claim per break; recovery cannot
+exceed the claim.</li>
+<li>409 for an illegal transition, 422 for a refused claim.</li>
+</ul>
+
+<h2>Step 12 — Authentication and real tenant isolation</h2>
+<p>Do this before building further on top, not after.</p>
+<pre><code>-- 1. a least-privilege role: neither owner nor superuser
+CREATE ROLE reconpilot_app LOGIN PASSWORD '...';
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO reconpilot_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO reconpilot_app;
+
+-- 2. force RLS so it applies to the owner too
+ALTER TABLE transaction_event FORCE ROW LEVEL SECURITY;
+
+-- 3. policies governing reads AND writes
+CREATE POLICY tenant_isolation ON transaction_event
+    USING      (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
+    WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);</code></pre>
+
+<p>On the Java side:</p>
+<ol>
+<li><b>Two datasources.</b> App as <code>reconpilot_app</code>; Flyway and system tasks as the owner.</li>
+<li><b>Declare the primary <code>JdbcTemplate</code> explicitly</b> and mark it <code>@Primary</code> — otherwise
+declaring an admin one silently deletes it.</li>
+<li><b>Honour <code>JdbcConnectionDetails</code></b> in your DataSource bean, or you disconnect Testcontainers and
+your tests will point at your dev database.</li>
+<li>A <code>TenantAwareDataSource</code> that sets the tenant on <b>every checkout</b> and clears it on
+<b>close</b>.</li>
+<li>JWT filter establishing the tenant from the <i>signed token</i>, clearing the ThreadLocal in a
+<code>finally</code>.</li>
+<li>BCrypt for passwords. Same 401 for unknown email and wrong password. 401 entry point, not 403.</li>
+</ol>
+
+<div class="box bug"><span class="t">Make the test suite prove it is talking to a container</span>
+<pre><code>if (!url.equals(postgres.getJdbcUrl()))
+    throw new IllegalStateException("Refusing to run: not the test container");</code></pre>
+<p>Add this before you write a single <code>TRUNCATE</code>. We added it afterwards, having lost a million rows.</p></div>
+
+<p>Then write the isolation test that <b>connects as the app role</b> — a test running as the owner would pass while
+proving the opposite of what it claims.</p>
+
+<h2>Step 13 — The frontend</h2>
+<pre><code>npm create vite@latest frontend -- --template react-ts
+cd frontend && npm install
+npm install @mui/material @emotion/react @emotion/styled @mui/icons-material \
+            @reduxjs/toolkit react-redux framer-motion react-router-dom recharts</code></pre>
+<ul>
+<li><b>One</b> design system. Not two.</li>
+<li>Vite proxy for <code>/api</code> — sidestep CORS rather than configuring around it.</li>
+<li>RTK Query with <code>tagTypes</code> and <code>invalidatesTags</code>.</li>
+<li><code>prepareHeaders</code> attaches the token in one place; a base-query wrapper signs out on any 401.</li>
+<li>Server state in RTK Query, client state in a small <code>uiSlice</code>. Keep them apart.</li>
+<li>Mirror the state machine to decide which buttons to <i>offer</i> — the server remains the authority.</li>
+</ul>
+<div class="box why"><span class="t">Expect the first screen to break your API</span>
+<p>Ours exposed two defects within minutes: raw maps leaking snake_case, and a missing id that made rows
+undisplayable-but-unactionable. Design the API <i>with</i> its first consumer.</p></div>
+
+<h2>Step 14 — Wire up the build properly</h2>
+<pre><code>&lt;plugin&gt;
+  &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+  &lt;artifactId&gt;maven-failsafe-plugin&lt;/artifactId&gt;
+  &lt;executions&gt;&lt;execution&gt;&lt;goals&gt;
+    &lt;goal&gt;integration-test&lt;/goal&gt;&lt;goal&gt;verify&lt;/goal&gt;
+  &lt;/goals&gt;&lt;/execution&gt;&lt;/executions&gt;
+&lt;/plugin&gt;</code></pre>
+<pre><code>./mvnw test      # *Test  — fast, no Docker
+./mvnw verify    # + *IT   — the full check</code></pre>
+<p>And for every regression test you write: <b>put the bug back and watch it fail</b>, then restore the fix.</p>
+
+<h1>10 · Interview answers</h1>
+<p class="lead">The short versions. Each one is backed by something you measured.</p>
+
+<h2>"Tell me about a project."</h2>
+<blockquote>I built a reconciliation platform for India's new UPI MDR rules. It ingests settlement files —
+two gigabytes, millions of rows — independently recomputes what each merchant should have been charged under the
+NPCI framework, and drives the differences to recovery. On a million-row file it finds around 7,300 discrepancies
+worth ₹1.3 lakh in three seconds, in a 256 MB heap.</blockquote>
+
+<h2>"How did you decide the architecture?"</h2>
+<blockquote>I estimated first. A thousand merchants at a thousand transactions each is 0.4 writes per second
+average, 280 at peak, and about 5.5 GB a year. A single Postgres instance handles that for years. So this is not a
+scale problem, it is a correctness problem — and I spent the complexity budget on determinism and auditability
+rather than on distribution.</blockquote>
+
+<h2>"Why not microservices?"</h2>
+<blockquote>Because nothing in the numbers asked for them. They would have added network partitions, partial
+failures and eventual consistency to a system whose hard requirement is paisa-exact correctness. I built a modular
+monolith with enforced boundaries, so any module could be extracted later if a real reason appeared.</blockquote>
+
+<h2>"How do you handle a 2 GB file?"</h2>
+<blockquote>Stream it. I measured both ways: reading a 148 MB file whole used 251 MB of a 256 MB heap and died
+below that, because each line becomes a String object costing about 2.7× the file size. Streaming did the same work
+in 23 MB. Memory has to be independent of input size — the dangerous case is the one that <i>almost</i> fits,
+because it ships and then dies at 3 a.m. on your biggest customer's biggest file.</blockquote>
+
+<h2>"How do you guarantee you don't double-process a file?"</h2>
+<blockquote>A SHA-256 of the file bytes under a unique constraint, so Postgres rejects it rather than application
+code that someone can forget. A duplicate 148 MB upload returns in 652 milliseconds having written nothing. The
+same pattern appears three times in the system.</blockquote>
+
+<h2>"Tell me about a bug you found."</h2>
+<blockquote>I enabled row-level security for multi-tenant isolation, then tested whether it actually worked — and it
+did nothing. Postgres exempts a table's owner from RLS unless you also FORCE it, and exempts superusers entirely,
+and the app connected as both. Two million rows were visible with no tenant context. I'd written an ADR claiming
+defence in depth and believed it. The fix needed a least-privilege role, FORCE, and WITH CHECK on the policies —
+USING alone governs reads, so a tenant could otherwise write rows it couldn't see.</blockquote>
+
+<h2>"Tell me about a concurrency bug."</h2>
+<blockquote>Merchant creation was a check-then-act: SELECT, then INSERT if absent. Two million rows sequentially
+never hit it. The first burst of 16 concurrent uploads failed 12 of 14 batches with a duplicate key. I replaced it
+with an atomic INSERT … ON CONFLICT … RETURNING, letting Postgres resolve the race. The lesson is that any
+check-then-act has a gap, and something will eventually land in it.</blockquote>
+
+<h2>"How do you know your tests are any good?"</h2>
+<blockquote>I put the bugs back and watched the tests fail, then restored the fixes. A regression test that has
+never failed is a hypothesis, not a test. I also validated the detection engine by planting a known number of
+errors — 7,300 — and requiring it to find exactly those, with the expected values computed by a second
+implementation I wrote by hand. That caught a one-paise rounding disagreement that was producing 8,174 false
+claims.</blockquote>
+
+<h2>"What's the hardest part of the domain?"</h2>
+<blockquote>Rounding. The regulator publishes 0.4% but never states a rounding rule. One paise of disagreement
+between our arithmetic and a PSP's produces thousands of false claims — and the product's whole premise is that our
+arithmetic is right. So filing is disabled by default in code, and the error message explains why. That's an
+engineering measurement turned into a business control.</blockquote>
+
+<h2>"What would you do differently or next?"</h2>
+<blockquote>Three things. Generate the TypeScript types from an OpenAPI spec instead of mirroring them by hand.
+Move the ingestion queue outside the process — not for throughput, which we don't need, but so work survives a
+restart. And add the AI layer for normalising PSP statement formats, which is the part that doesn't generalise
+well in code.</blockquote>
+
+<div class="box ok"><span class="t">The sentence to end on</span>
+<p>Most candidates describe features they built. The stronger move is to describe <b>beliefs you tested and found
+false</b> — the security control that did nothing, the test suite that destroyed a database, the rounding
+difference that would have destroyed customer trust. That is what senior engineering actually looks like, and very
+few people at two years' experience can show it.</p></div>
+
+<hr>
+<p class="small" style="text-align:center;margin-top:8mm">
+ReconPilot — Concepts and Rebuild Guide · Built September 2026<br>
+14 commits · 12 architecture decision records · 87 tests · 6 migrations · 10 documented defects<br>
+Every number in this document was measured on the real system.
+</p>
+
+</body></html>
