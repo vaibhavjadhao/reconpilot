@@ -100,3 +100,31 @@ visible rather than stuck, but it cannot resume them and the caller is not told.
 
 **Fix:** move the queue outside the process. This, rather than throughput, is
 what a message broker buys at this scale.
+
+---
+
+## D6. Reconciliation runs synchronously inside the HTTP request
+
+**Severity:** low for now, medium as batches grow. Same shape as D2.
+
+`POST /api/recon/{batchId}` scans the batch on the request thread. At 3 seconds
+for 1,000,000 rows this is tolerable, but the duration scales with batch size
+and it will eventually hit the same proxy timeouts that D2 did.
+
+**Fix:** reuse the pattern from ADR 0008 -- 202 Accepted, a bounded pool, and a
+pollable status.
+
+---
+
+## D7. False breaks are possible until the rounding rule is confirmed
+
+**Severity:** high for correctness of customer-facing claims.
+
+Demonstrated, not theoretical. A one-paise rounding disagreement between two
+implementations produced **8,174 false breaks** in a single 1,000,000-row run
+(see ADR 0009). Our HALF_UP choice is provisional pending open question 5.
+
+If a real PSP rounds differently from us, every affected transaction becomes a
+false claim. **No breaks should be filed against a live PSP until the rounding
+rule is confirmed from the NPCI circular**, or until the engine is calibrated
+against a sample of that PSP's actual charges.

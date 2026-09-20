@@ -21,7 +21,7 @@ public final class MdrCalculator {
     static final long THRESHOLD_PAISE = 200_000L;
 
     /** Rs 300 per-transaction cap (FAQ Q32). Binds at exactly Rs 75,000 for 0.4%. */
-    static final long CAP_PAISE = 30_000L;
+    public static final long CAP_PAISE = 30_000L;
 
     /** Rs 5 flat for industry-program categories (FAQ Q33). */
     static final long INDUSTRY_FLAT_PAISE = 500L;
