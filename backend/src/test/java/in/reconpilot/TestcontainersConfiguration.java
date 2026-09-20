@@ -4,6 +4,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -24,7 +25,21 @@ public class TestcontainersConfiguration {
     }
 
     /**
-     * Points the admin and Flyway connections at the container too.
+     * A real broker, pinned to the same image as docker-compose.
+     *
+     * <p>An embedded broker would start faster, but it is a different
+     * implementation with different defaults, so it can pass while the real
+     * thing fails -- the same reason these tests use real PostgreSQL rather
+     * than H2.
+     */
+    @Bean
+    KafkaContainer kafkaContainer() {
+        return new KafkaContainer(DockerImageName.parse("apache/kafka:4.3.1"));
+    }
+
+    /**
+     * Points every connection that is not {@code spring.datasource.*} at the
+     * containers.
      *
      * <p>{@code @ServiceConnection} only overrides {@code spring.datasource.*}.
      * Any datasource declared under a different property prefix keeps whatever
@@ -34,9 +49,13 @@ public class TestcontainersConfiguration {
      * <p>The test suite therefore ran {@code TRUNCATE ... CASCADE} against the
      * developer's own data and destroyed a million rows. Nothing warned,
      * because from Spring's point of view everything was configured correctly.
+     *
+     * <p>Kafka is registered here too: Spring Boot ships no connection-details
+     * factory for the newer {@code org.testcontainers.kafka} module, so
+     * {@code @ServiceConnection} cannot wire it automatically.
      */
     @Bean
-    DynamicPropertyRegistrar containerProperties(PostgreSQLContainer postgres) {
+    DynamicPropertyRegistrar containerProperties(PostgreSQLContainer postgres, KafkaContainer kafka) {
         return registry -> {
             registry.add("app.datasource.admin.url", postgres::getJdbcUrl);
             registry.add("app.datasource.admin.username", postgres::getUsername);
@@ -44,6 +63,7 @@ public class TestcontainersConfiguration {
             registry.add("spring.flyway.url", postgres::getJdbcUrl);
             registry.add("spring.flyway.user", postgres::getUsername);
             registry.add("spring.flyway.password", postgres::getPassword);
+            registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
         };
     }
 }

@@ -96,7 +96,10 @@ object-store key.
 
 ---
 
-## D5. In-process work does not survive a restart
+## D5. In-process work does not survive a restart ~~OPEN~~ RESOLVED
+
+**Resolved 2026-09-20** by ADR 0014. Verified with a `kill -9` mid-batch:
+Kafka redelivered and the batch completed to 400,000 rows. Original below.
 
 **Severity:** medium. Introduced by ADR 0008.
 
@@ -109,7 +112,9 @@ what a message broker buys at this scale.
 
 ---
 
-## D6. Reconciliation runs synchronously inside the HTTP request
+## D6. Reconciliation runs synchronously inside the HTTP request ~~OPEN~~ RESOLVED
+
+**Resolved 2026-09-20** by ADR 0014: queued like ingestion. Original below.
 
 **Severity:** low for now, medium as batches grow. Same shape as D2.
 
@@ -211,3 +216,57 @@ completion -- the file then sits in the staging directory forever.
 **Fix:** a startup sweep that removes staged files with no in-flight batch,
 alongside the existing `StartupRecovery`. Low severity because one orphan per
 crash is a slow leak, not an outage.
+
+---
+
+## D12. A downstream exception is reported as 401, not 500
+
+**Severity:** medium. Costs hours of debugging every time it happens.
+
+A serialisation failure inside the upload endpoint surfaced to the client as
+**401 Unauthorized** with a perfectly valid token, while the same token worked
+on every GET. Hours went into suspecting authentication; the actual fault was
+Jackson refusing to serialise an `Instant`.
+
+The cause is ordering. `JwtAuthFilter` wraps `chain.doFilter` in a
+`try/finally` that clears the security context. An exception thrown downstream
+unwinds through that `finally` first, so by the time Spring Security's
+translation filter sees the request there is no authentication left, and it
+answers with the configured entry point: 401.
+
+**Fix:** clear the context in an `afterCompletion`-style hook, or let the
+exception be translated before the filter unwinds. Until then, the rule for
+anyone debugging: *a 401 on an endpoint that works elsewhere with the same
+token is not an auth problem.*
+
+---
+
+## D13. Accepting an upload is a dual write
+
+**Severity:** medium.
+
+Accepting an upload inserts a batch row and then publishes to Kafka. Those are
+two systems and one logical operation, with no shared transaction. A process
+killed between them leaves a RECEIVED row that nothing will ever process.
+
+There is no solution using only a database and a broker -- this is the
+dual-write problem. The real fix is the **transactional outbox**: write the
+message into an outbox table in the same transaction as the batch row, and have
+a separate process publish from it, so the only atomic act is a database commit.
+
+`StartupRecovery` currently sweeps up orphans past a grace period so they are
+visible rather than silently stuck.
+
+---
+
+## D14. Nothing alerts on consumer lag
+
+**Severity:** low now, medium once deployed. Introduced by ADR 0014.
+
+The thread pool rejected work with 503 when saturated -- unpleasant but
+immediate and visible. A queue absorbs the burst instead, so overload now shows
+up as consumer lag: messages accepted, nothing obviously wrong, results simply
+late.
+
+**Fix:** export consumer lag as a metric and alert on it. Replacing a loud
+failure with a quiet one is only an improvement if something is watching.

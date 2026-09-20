@@ -9,7 +9,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
-import java.util.concurrent.RejectedExecutionException;
+import in.reconpilot.messaging.IngestionPublisher;
+import in.reconpilot.messaging.MessagePublishException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,7 +30,7 @@ class IngestionRejectionIT extends AbstractIntegrationTest {
 
     @Autowired IngestionCoordinator coordinator;
     @Autowired IngestionService service;
-    @MockitoBean IngestionWorker worker;
+    @MockitoBean IngestionPublisher publisher;
 
     @TempDir Path tmp;
 
@@ -40,10 +41,10 @@ class IngestionRejectionIT extends AbstractIntegrationTest {
         Files.writeString(p, SettlementCsvParser.EXPECTED_HEADER + "\n"
                 + "T1,shop1@upi,300000,P2M,UPI_QR,STANDARD,0,2026-10-15T10:00:00Z\n");
 
-        doThrow(new RejectedExecutionException("pool full"))
-                .when(worker).process(any(), any(), any(), any());
+        doThrow(new MessagePublishException("broker unavailable", new RuntimeException()))
+                .when(publisher).publishIngestion(any());
 
-        assertThrows(RejectedExecutionException.class, () -> coordinator.submit(tenant, p));
+        assertThrows(MessagePublishException.class, () -> coordinator.submit(tenant, p));
 
         // The original bug: the batch row survived the rejection, and because
         // idempotency keys on the content hash, every retry then reported

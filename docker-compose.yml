@@ -34,5 +34,45 @@ services:
       timeout: 3s
       retries: 10
 
+  kafka:
+    # Pinned, not :latest -- the same reasoning as the Postgres image. A build
+    # that tests against whatever happens to be current is not reproducible.
+    image: apache/kafka:4.3.1
+    container_name: reconpilot-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft mode: Kafka is its own coordinator. Older setups needed a
+      # separate ZooKeeper cluster to elect leaders and store metadata; since
+      # Kafka 3.3 the brokers do that themselves, which removes a whole
+      # component from the deployment.
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      # What clients are told to connect to. Spring runs on the host, so this
+      # must be the host's view of the broker, not the container's.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # One broker, so nothing can be replicated anywhere. Fine locally;
+      # production would use at least three with a replication factor of 3.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
 volumes:
   pgdata:
+  kafkadata:

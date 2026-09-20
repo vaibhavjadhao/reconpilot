@@ -1,9 +1,15 @@
 package in.reconpilot.recon;
 
+import in.reconpilot.messaging.IngestionPublisher;
+import in.reconpilot.messaging.ReconciliationRequested;
+import in.reconpilot.security.TenantContext;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -16,17 +22,30 @@ import java.util.UUID;
 @RestController
 public class ReconController {
 
-    private final ReconciliationService recon;
+    private final IngestionPublisher publisher;
     private final JdbcTemplate jdbc;
 
-    public ReconController(ReconciliationService recon, JdbcTemplate jdbc) {
-        this.recon = recon;
+    public ReconController(IngestionPublisher publisher, JdbcTemplate jdbc) {
+        this.publisher = publisher;
         this.jdbc = jdbc;
     }
 
+    /**
+     * Requests a reconciliation and returns immediately.
+     *
+     * <p>Was synchronous, which was defect D6 -- the same mistake as D2. Three
+     * seconds for a million rows is tolerable, but the duration scales with the
+     * batch and would eventually hit the proxy timeouts that made D2 a problem.
+     * Now it is queued like ingestion, so poll the batch to see the outcome.
+     */
     @PostMapping("/api/recon/{batchId}")
-    public ReconciliationResult run(@PathVariable UUID batchId) {
-        return recon.reconcile(batchId);
+    public ResponseEntity<Map<String, String>> run(@PathVariable UUID batchId) {
+        publisher.publishReconciliation(
+                new ReconciliationRequested(batchId, TenantContext.get()));
+
+        return ResponseEntity.accepted()
+                .location(URI.create("/api/breaks/summary"))
+                .body(Map.of("batchId", batchId.toString(), "status", "QUEUED"));
     }
 
     /** Counts and money by break type. */

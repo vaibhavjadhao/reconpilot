@@ -52,12 +52,30 @@ public class IngestionService {
     /** Rows per round trip to the database. */
     private static final int BATCH_SIZE = 1_000;
 
+    /**
+     * ON CONFLICT DO NOTHING makes reprocessing a batch safe.
+     *
+     * <p>Kafka delivers at least once: a consumer killed mid-batch has its
+     * message redelivered, and the rows it already wrote are still there. The
+     * unique constraint then rejected the whole retry with a duplicate-key
+     * error, so a crashed ingestion could never finish -- the message would be
+     * redelivered forever and fail identically every time.
+     *
+     * <p>File-level idempotency (the content hash) does not help here: that
+     * stops the same file being ingested as two different batches. This stops
+     * the same batch being written twice, which is a different question, and
+     * the one at-least-once delivery actually asks.
+     *
+     * <p>Skipping rows that already exist also means a resumed batch continues
+     * from where it stopped rather than starting over.
+     */
     private static final String INSERT_EVENT = """
             INSERT INTO transaction_event
                 (id, tenant_id, batch_id, payee_merchant_id, external_txn_id,
                  amount_paise, txn_type, payment_rail, payee_category,
                  charged_mdr_paise, occurred_at, recorded_at, raw)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb)
+            ON CONFLICT (tenant_id, batch_id, external_txn_id) DO NOTHING
             """;
 
     private final JdbcTemplate jdbc;

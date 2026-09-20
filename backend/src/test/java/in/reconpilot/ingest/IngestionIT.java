@@ -115,6 +115,37 @@ class IngestionIT extends AbstractIntegrationTest {
                 "a FAILED batch must not make the file look already ingested");
     }
 
+    /**
+     * Regression for at-least-once delivery.
+     *
+     * <p>Kafka redelivers a message whose consumer died before committing its
+     * offset, so a batch killed halfway through is processed again with its
+     * earlier rows already present. The unique constraint rejected that retry
+     * outright, so a crashed ingestion could never finish: redelivered
+     * forever, failing identically every time.
+     *
+     * <p>Reprocessing must therefore be a no-op for rows already written, and
+     * must continue from where it stopped.
+     */
+    @Test
+    void reprocessingABatchIsIdempotentAndResumes() throws Exception {
+        UUID tenant = newTenant("acme");
+        Path f = csv("a.csv", List.of(
+                row("T1", "s@upi", 300_000),
+                row("T2", "s@upi", 400_000),
+                row("T3", "s@upi", 500_000)));
+
+        PreparedBatch b = service.prepare(tenant, f);
+        assertEquals(3, service.loadRows(tenant, b.batchId(), f, b.recordedAt()));
+        assertEquals(3, count("transaction_event"));
+
+        // Exactly what a redelivery does: run the same batch again.
+        assertDoesNotThrow(() -> service.loadRows(tenant, b.batchId(), f, b.recordedAt()));
+
+        assertEquals(3, count("transaction_event"),
+                "a redelivered batch must not duplicate rows it already wrote");
+    }
+
     // ------------------------------------------- regression: the two real bugs
 
     /**

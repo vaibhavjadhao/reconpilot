@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import in.reconpilot.security.TenantContext;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
@@ -13,18 +12,16 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Runs the long part of ingestion off the request thread.
+ * The unit of ingestion work: parse a staged file into the event log and
+ * record how it went.
  *
- * <p>This lives in its own bean rather than as a method on
- * {@link IngestionService} for a reason worth understanding: {@code @Async} is
- * implemented with a proxy. Spring wraps the bean, and the wrapper is what
- * dispatches to another thread. A call from one method of a bean to another
- * method of the <em>same</em> bean goes through {@code this}, not the proxy, so
- * the annotation is silently ignored and the code runs synchronously.
- *
- * <p>It is a common and genuinely confusing bug: the annotation is present, the
- * code compiles, and nothing is async. Calling across beans avoids it entirely.
- * The same trap applies to {@code @Transactional} and {@code @Cacheable}.
+ * <p>Invoked by the Kafka listener rather than a thread pool. It was
+ * previously {@code @Async}, and the separate-bean structure survives from
+ * that: {@code @Async} is proxy-based, so a call from one method of a bean to
+ * another method of the same bean bypasses the proxy and runs synchronously
+ * with no warning. The same trap applies to {@code @Transactional} and
+ * {@code @Cacheable}, and is worth remembering even though this class no
+ * longer relies on it.
  */
 @Component
 public class IngestionWorker {
@@ -41,7 +38,6 @@ public class IngestionWorker {
         this.staging = staging;
     }
 
-    @Async("ingestionExecutor")
     public void process(UUID batchId, UUID tenantId, Path file, Instant recordedAt) {
         log.info("[{}] starting ingestion of {} on thread {}",
                 batchId, file.getFileName(), Thread.currentThread().getName());
