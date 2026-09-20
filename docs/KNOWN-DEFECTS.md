@@ -148,3 +148,31 @@ file, any number of failed attempts.
 The lesson is that application logic and database constraints encode the same
 rule in two places, and changing one without the other produces a system that
 contradicts itself.
+
+---
+
+## D9. The build depended on the developer's shell ~~OPEN~~ RESOLVED
+
+**Resolved 2026-09-20.** Two separate causes, both meaning `mvn test` passed in
+a terminal and failed in IntelliJ.
+
+**A context test in the unit phase.** Spring Initializr generates
+`BackendApplicationTests`, which starts the whole application and therefore a
+database container -- but the `*Tests` name puts it in Surefire's fast phase, so
+`mvn test` required Docker. A test that needs a database is not a unit test.
+Renamed to `ApplicationContextIT` so Failsafe runs it.
+
+**Lombok breaking on JDK 27.** `JAVA_HOME` was set in `~/.zprofile`, which only
+zsh *login* shells read. IntelliJ runs Maven via `/bin/sh`, so it fell back to
+JDK 27, where Lombok's annotation processor crashes with
+`ExceptionInInitializerError: com.sun.tools.javac.tree.EndPosTable` -- it reaches
+into private compiler internals, so new JDKs break it until it catches up.
+
+Lombok was never used anywhere in `src/`; it came in from the Initializr
+checkbox. Removing it eliminates the failure entirely rather than pinning
+around it, and the build now succeeds on both JDK 21 and JDK 27.
+
+The general shape is worth remembering: **configuration that lives in a shell
+profile is invisible to anything that is not that shell** -- not `/bin/sh`, not
+an app launched from the Dock, not a CI runner. A build that only works because
+of your shell is not reproducible.
