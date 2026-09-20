@@ -1,0 +1,38 @@
+# Local development stack.
+#
+# Note there is no `version:` key -- it was removed in Compose v2 and now
+# produces a warning if present.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: reconpilot-postgres
+    environment:
+      POSTGRES_DB: reconpilot
+      POSTGRES_USER: reconpilot
+      POSTGRES_PASSWORD: localdev        # local only; never a real secret
+    ports:
+      - "5432:5432"
+    volumes:
+      # Named volume: the container is disposable, the data is not.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # "Running" is not the same as "ready to accept queries".
+      test: ["CMD-SHELL", "pg_isready -U reconpilot -d reconpilot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: reconpilot-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

@@ -37,6 +37,15 @@ Primary source: [DFS MDR FAQ, 15 Sept 2026](rules/dfs-mdr-faq-2026-09-15.pdf)
    false breaks. For a product whose premise is that our arithmetic is right,
    this must be resolved before launch.
 
+   A second consequence surfaced while implementing the calculator: the
+   rounding mode changes *where the Rs 300 cap begins to bind*. The regulation
+   reads as though the cap starts at exactly Rs 75,000, since 0.4% of Rs 75,000
+   is exactly Rs 300. Under HALF_UP, 0.4% of Rs 74,999 is Rs 299.996 and rounds
+   to Rs 300, so the cap binds fractionally earlier. Under truncation it would
+   not. The rounding mode is currently pinned provisionally in
+   `MdrCalculator.ROUNDING` with tests asserting the resulting boundary, so
+   that changing it is a deliberate and visible act.
+
 6. **Is the P2M -> P2PM reverse transition permitted?** If a merchant falls
    below Rs 1 lakh/month after being reclassified, do they return to P2PM, and
    after how many months? Not addressed (Q29 describes only the forward path).
