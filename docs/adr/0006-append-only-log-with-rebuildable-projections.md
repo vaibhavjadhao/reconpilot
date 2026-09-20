@@ -1,6 +1,6 @@
 # ADR 0006: Append-only event log with rebuildable projections
 
-**Status:** Accepted
+**Status:** Accepted (tenant-isolation claim corrected below)
 **Date:** 2026-09-20
 **Implements:** ADR 0003, ADR 0004
 
@@ -60,3 +60,16 @@ data.
   Redis and rebuilt from the log on invalidation.
 - Correctness of projections is testable by rebuilding them from scratch and
   comparing -- a property worth an automated test.
+
+## Correction, 2026-09-20
+
+The claim above that row-level security provides defence in depth is **not true
+as implemented**. PostgreSQL exempts a table's owner from RLS unless
+`FORCE ROW LEVEL SECURITY` is set, and the application connects as the owner, so
+all policies are bypassed. Verified: 2,000,000 rows were returned with no
+`app.tenant_id` set.
+
+Tracked as D1 in KNOWN-DEFECTS.md. The fix requires forcing RLS, connecting as a
+non-owner role, and setting the tenant per transaction from an authenticated
+request -- the last of which needs authentication that does not exist yet, so it
+is scheduled with that work rather than patched in isolation.
