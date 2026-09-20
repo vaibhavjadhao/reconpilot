@@ -42,6 +42,30 @@ public class ApiExceptionHandler {
                 "message", "All ingestion workers are occupied. Retry shortly.");
     }
 
+    /**
+     * The request conflicts with the resource's current state -- for example
+     * settling a claim that was never filed. 409 says "not now", where 400
+     * would wrongly imply the request was malformed.
+     */
+    @ExceptionHandler(in.reconpilot.dispute.IllegalTransitionException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Map<String, String> handleIllegalTransition(
+            in.reconpilot.dispute.IllegalTransitionException e) {
+        return Map.of("error", "ILLEGAL_TRANSITION", "message", e.getMessage());
+    }
+
+    /**
+     * Well-formed and understood, but not allowed by a business rule -- such as
+     * claiming money that is not ours. 422 rather than 400 because nothing is
+     * wrong with the request's syntax.
+     */
+    @ExceptionHandler(in.reconpilot.dispute.ClaimNotPermittedException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    public Map<String, String> handleClaimNotPermitted(
+            in.reconpilot.dispute.ClaimNotPermittedException e) {
+        return Map.of("error", "CLAIM_NOT_PERMITTED", "message", e.getMessage());
+    }
+
     /** A negative amount is the caller's mistake, so it is a 400, not a 500. */
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
