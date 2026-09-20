@@ -1,6 +1,11 @@
 import { AppBar, Box, Container, Tab, Tabs, Toolbar, Typography, Chip } from '@mui/material'
 import InsightsIcon from '@mui/icons-material/Insights'
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import LogoutIcon from '@mui/icons-material/Logout'
+import { Button } from '@mui/material'
+import { signedOut } from '../store/authSlice'
+import type { RootState } from '../store'
 import { motion } from 'framer-motion'
 
 const TABS = [
@@ -10,6 +15,8 @@ const TABS = [
 
 export default function Layout() {
   const { pathname } = useLocation()
+  const dispatch = useDispatch()
+  const email = useSelector((s: RootState) => s.auth.email)
   const active = pathname.startsWith('/breaks') || pathname.startsWith('/claims') ? 1 : 0
 
   return (
@@ -34,6 +41,10 @@ export default function Layout() {
 
             <Box sx={{ flex: 1 }} />
             <Chip size="small" variant="outlined" color="warning" label="Filing disabled — D7" />
+            <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>{email}</Typography>
+            <Button size="small" startIcon={<LogoutIcon />} onClick={() => dispatch(signedOut())}>
+              Sign out
+            </Button>
           </Toolbar>
         </Container>
       </AppBar>

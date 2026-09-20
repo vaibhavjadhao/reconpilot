@@ -182,7 +182,11 @@ of your shell is not reproducible.
 
 ---
 
-## D10. The frontend does not authenticate
+## D10. The frontend does not authenticate ~~OPEN~~ RESOLVED
+
+**Resolved 2026-09-20.** Login and register screens, token in a Redux slice
+persisted to localStorage, `prepareHeaders` attaching the bearer token from one
+place, and a base-query wrapper that signs the user out on any 401.
 
 **Severity:** blocking for the UI, introduced by ADR 0012.
 
