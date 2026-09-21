@@ -1,0 +1,207 @@
+# Every push runs the same checks a reviewer would run by hand, on a machine
+# that has never seen this project before. That last part is the point: a build
+# that passes only on the laptop that built it is not evidence of anything --
+# this project has already been bitten by exactly that (defect D9, where the
+# build depended on the developer's shell).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A second push while the first is still running cancels the first. Nobody
+  # needs the results of a commit that has already been replaced.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  backend:
+    name: Backend - 119 tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      # Java 21, matching the Dockerfile. The version the tests run on and the
+      # version the image runs on must be the same, or CI is testing something
+      # other than what ships.
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # Unit tests (Surefire, *Test) and integration tests (Failsafe, *IT) in
+      # one command. `verify` is deliberate: `mvn test` would run only the
+      # unit tests and report success, which is how the integration tests were
+      # silently skipped for a whole session once already.
+      #
+      # The integration tests start real PostgreSQL and Kafka containers via
+      # Testcontainers. GitHub's ubuntu runners have a Docker daemon, so this
+      # needs no extra setup.
+      - name: mvn verify
+        working-directory: backend
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Publish test report
+        if: always()          # a failing build is exactly when you want this
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: |
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/
+          retention-days: 7
+
+  frontend:
+    name: Frontend - typecheck, lint, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `npm ci`, not `npm install`: it installs exactly what the lockfile says
+      # and fails if package.json disagrees. Same reason the Dockerfile uses it.
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      # `npm run build` is `tsc -b && vite build`, so a type error fails here.
+      - name: Typecheck and build
+        working-directory: frontend
+        run: npm run build
+
+  stack:
+    name: Deployed stack - TLS, ingest, backup, restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # No point starting the whole stack if the code does not compile.
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      # Throwaway credentials, generated per run. Nothing here is a GitHub
+      # secret, because nothing here outlives the runner -- and a secret that
+      # does not need to exist cannot leak.
+      - name: Generate a disposable .env
+        run: |
+          cat > .env <<EOF
+          DB_NAME=reconpilot
+          DB_OWNER_USER=reconpilot
+          DB_OWNER_PASSWORD=$(openssl rand -hex 24)
+          DB_APP_USER=reconpilot_app
+          DB_APP_PASSWORD=$(openssl rand -hex 24)
+          RECONPILOT_JWT_SECRET=$(openssl rand -base64 48)
+          HTTP_PORT=8081
+          HTTPS_PORT=8443
+          TLS_MODE=selfsigned
+          TLS_SERVER_NAME=localhost
+          CLAIMS_FILING_ENABLED=false
+          AI_FORMAT_DISCOVERY_ENABLED=false
+          BACKUP_INTERVAL_SECONDS=86400
+          BACKUP_KEEP=7
+          EOF
+
+      - name: Build and start
+        run: docker compose -f docker-compose.prod.yml up -d --build
+
+      - name: Wait for every service to report healthy
+        run: |
+          for i in $(seq 1 60); do
+            unhealthy=$(docker compose -f docker-compose.prod.yml ps \
+                          --format '{{.Service}} {{.Health}}' |
+                        grep -v ' healthy$' || true)
+            [ -z "$unhealthy" ] && echo "all healthy" && exit 0
+            sleep 5
+          done
+          echo "still not healthy:"; docker compose -f docker-compose.prod.yml ps
+          docker compose -f docker-compose.prod.yml logs --tail 100
+          exit 1
+
+      # StartupSecretCheck is a control, and a control nobody has watched
+      # refuse is a hypothesis. This proves it is armed on every commit.
+      - name: The application must refuse development secrets
+        run: |
+          set -e
+          out=$(docker compose -f docker-compose.prod.yml run --rm --no-deps \
+                  -e RECONPILOT_JWT_SECRET=local-development-secret-change-me-0123456789abcdef \
+                  backend 2>&1 || true)
+          echo "$out" | tail -20
+          echo "$out" | grep -qi 'secret' \
+            || { echo "expected a refusal mentioning the secret, got none"; exit 1; }
+          echo "$out" | grep -q 'Tomcat started' \
+            && { echo "FAIL: the server bound a port before refusing"; exit 1; }
+          echo "refused before binding a port, as designed"
+
+      - name: TLS, redirects and security headers
+        run: |
+          set -e
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/claims/abc)
+          [ "$code" = "308" ] || { echo "plain HTTP should redirect, got $code"; exit 1; }
+
+          code=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost:8443/claims/abc)
+          [ "$code" = "200" ] || { echo "SPA deep link over TLS failed: $code"; exit 1; }
+
+          code=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost:8443/api/breaks)
+          [ "$code" = "401" ] || { echo "unauthenticated API should be 401, got $code"; exit 1; }
+
+          # This one has regressed before: nginx drops inherited add_header in
+          # any block that sets one of its own, so /assets/ silently lost every
+          # security header while the pages people checked kept theirs.
+          asset=$(curl -sk https://localhost:8443/ | grep -o '/assets/[^"]*\.js' | head -1)
+          curl -sk -D - -o /dev/null "https://localhost:8443$asset" \
+            | grep -qi 'x-frame-options: DENY' \
+            || { echo "security headers missing on $asset"; exit 1; }
+
+          # HSTS must NOT be sent with a self-signed certificate.
+          curl -sk -D - -o /dev/null https://localhost:8443/ \
+            | grep -qi 'strict-transport-security' \
+            && { echo "FAIL: HSTS sent with a self-signed certificate"; exit 1; }
+          echo "TLS behaviour correct"
+
+      - name: Register, log in and call the API over TLS
+        run: |
+          set -e
+          email="ci-$(date +%s)@example.com"
+          curl -sk -X POST https://localhost:8443/api/auth/register \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$email\",\"password\":\"Str0ng-Passw0rd!\",\"tenantName\":\"CI\"}" \
+            -o /dev/null -w 'register %{http_code}\n'
+          tok=$(curl -sk -X POST https://localhost:8443/api/auth/login \
+                  -H 'Content-Type: application/json' \
+                  -d "{\"email\":\"$email\",\"password\":\"Str0ng-Passw0rd!\"}" \
+                | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+          code=$(curl -sk -o /dev/null -w '%{http_code}' \
+                   -H "Authorization: Bearer $tok" https://localhost:8443/api/breaks)
+          [ "$code" = "200" ] || { echo "authenticated call failed: $code"; exit 1; }
+          echo "end to end over TLS: ok"
+
+      # The claim this makes is not "a backup file was produced". It is "the
+      # backup restores to a database identical to the live one", checked
+      # table by table and by summing the money on both sides.
+      - name: Prove the backup restores
+        run: |
+          docker compose -f docker-compose.prod.yml \
+            run --rm --entrypoint /ops/restore-drill.sh backup
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.prod.yml logs --tail 200
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.prod.yml down -v

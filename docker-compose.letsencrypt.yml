@@ -1,0 +1,43 @@
+# Overlay that adds a real Let's Encrypt certificate to the production stack.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.letsencrypt.yml up -d
+#
+# It is a separate file because a laptop does not need it and cannot use it:
+# Let's Encrypt has to reach port 80 on a public DNS name to prove you control
+# it, which nothing on a home network can offer.
+#
+# The chicken-and-egg this solves: TLS_MODE=provided refuses to start without a
+# certificate (deliberately -- see ADR 0015), but the certificate can only be
+# issued once something is already answering on port 80. So the first boot runs
+# in selfsigned mode, which still serves the ACME challenge path over plain
+# HTTP, and only then does the mode change. ops/tls/issue-certificate.sh walks
+# through it.
+
+services:
+
+  frontend:
+    environment:
+      TLS_MODE: ${TLS_MODE:-selfsigned}
+      TLS_SERVER_NAME: ${DOMAIN:?set DOMAIN in .env, e.g. reconpilot.duckdns.org}
+    ports:
+      # Let's Encrypt validates over port 80 and 443 on the real ports, not on
+      # 8081/8443. A redirect to a non-standard port does not help it.
+      - "80:80"
+      - "443:443"
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      # Same webroot nginx serves /.well-known/acme-challenge/ from.
+      - acmedata:/var/www/acme
+      - letsencrypt:/etc/letsencrypt
+      # Where nginx reads its certificate. The deploy hook copies into here,
+      # so nginx never needs to understand Let's Encrypt's directory layout.
+      - tlsdata:/etc/nginx/tls
+      - ./ops/tls:/ops:ro
+    # Nothing to do until a script is run against it.
+    entrypoint: ["sleep", "infinity"]
+    restart: unless-stopped
+
+volumes:
+  letsencrypt:
