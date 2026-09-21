@@ -296,3 +296,24 @@ Zero rows means header-only inference and a materially worse mapping.
 masking identifying columns before sending, or a data-processing agreement
 covering it. The setting exists so the number is a choice; it does not make
 the choice for you.
+
+---
+
+## D16. Single-node deployment has no redundancy, TLS or backups
+
+**Severity:** blocking for anything handling real customer money.
+
+`docker-compose.prod.yml` runs one of everything on one machine:
+
+- **One Kafka broker.** Replication factor 1, so nothing is replicated and a
+  broker loss is data loss. Needs three brokers at RF 3.
+- **No TLS.** nginx serves plain HTTP. Bearer tokens and settlement data cross
+  the network in clear. Belongs at a load balancer or ingress in front.
+- **No Postgres backups.** No schedule, no retention, no restore drill. An
+  untested backup is not a backup.
+- **No log aggregation or alerting.** `docker logs` is the only view, and D14
+  (nothing alerts on consumer lag) is still open.
+
+None of these is an oversight -- a single-machine deployment is the right first
+step and each was a deliberate omission. They are recorded so the gap between
+"it runs" and "it can hold someone else's money" is never mistaken for zero.

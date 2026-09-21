@@ -1,0 +1,129 @@
+# Production-shaped stack: everything runs as a container, nothing is exposed
+# that does not need to be, and every secret comes from the environment.
+#
+#   cp .env.example .env    # then fill it in
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Differences from docker-compose.yml that matter:
+#
+#   * Only the frontend publishes a port. Postgres, Kafka and Redis are
+#     reachable on the internal Docker network and from nowhere else. In the
+#     dev file they are published so a laptop can reach them with psql; a
+#     deployed database that answers the internet is a database that gets found.
+#   * Services address each other by SERVICE NAME (postgres, kafka, backend),
+#     which Docker resolves on the shared network. "localhost" inside a
+#     container means that container, not the host.
+#   * Everything restarts unless explicitly stopped, and waits for its
+#     dependencies to be HEALTHY rather than merely started.
+
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:?set DB_NAME in .env}
+      POSTGRES_USER: ${DB_OWNER_USER:?set DB_OWNER_USER in .env}
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:?set DB_OWNER_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${DB_OWNER_USER} -d $${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:4.3.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      # The advertised listener is what clients are TOLD to connect to. In the
+      # dev file this is localhost, because Spring runs on the host. Here the
+      # backend is a container on the same network, so it must be the service
+      # name -- localhost would send it back to itself.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Single broker, so nothing can be replicated. A real deployment needs at
+      # least three brokers with a replication factor of 3, or a broker loss is
+      # data loss.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 20s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      DB_OWNER_USER: ${DB_OWNER_USER}
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
+      DB_APP_USER: ${DB_APP_USER:-reconpilot_app}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?set DB_APP_PASSWORD in .env}
+      KAFKA_BOOTSTRAP: kafka:9092
+
+      RECONPILOT_JWT_SECRET: ${RECONPILOT_JWT_SECRET:?set RECONPILOT_JWT_SECRET in .env}
+      # Turns on StartupSecretCheck. The application refuses to start if any
+      # credential is still a development default.
+      RECONPILOT_REQUIRE_EXTERNAL_SECRETS: "true"
+
+      # Still off by default: defect D7, the MDR rounding rule is unconfirmed.
+      CLAIMS_FILING_ENABLED: ${CLAIMS_FILING_ENABLED:-false}
+
+      AI_FORMAT_DISCOVERY_ENABLED: ${AI_FORMAT_DISCOVERY_ENABLED:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka:    { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          # The JVM reads the container limit, so -XX:MaxRAMPercentage=70 in the
+          # Dockerfile gives roughly a 1.4 GB heap here. Change this number and
+          # the heap follows; no rebuild needed.
+          memory: 2G
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "${HTTP_PORT:-8081}:80"
+    depends_on:
+      backend: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  kafkadata:
