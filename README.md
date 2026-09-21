@@ -1,6 +1,6 @@
 # ReconPilot
 
-[![CI](https://github.com/OWNER/reconpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/reconpilot/actions/workflows/ci.yml)
+[![CI](https://github.com/vaibhavjadhao/reconpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/vaibhavjadhao/reconpilot/actions/workflows/ci.yml)
 
 **A reconciliation platform that independently recomputes what a merchant
 *should* have been charged, compares it against what they *were* charged, and
