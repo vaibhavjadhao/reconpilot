@@ -219,7 +219,13 @@ crash is a slow leak, not an outage.
 
 ---
 
-## D12. A downstream exception is reported as 401, not 500
+## D12. A downstream exception is reported as 401, not 500 ~~OPEN~~ RESOLVED
+
+**Resolved 2026-09-21** while building format discovery, which made the fault
+actively misleading: a missing server-side API key looked to the user like
+their own session had expired. Fixed by exempting ERROR and ASYNC dispatches
+from authorisation -- the container re-entering a request it has already
+authorised is not a new request to authorise. Original description below.
 
 **Severity:** medium. Costs hours of debugging every time it happens.
 
@@ -270,3 +276,23 @@ late.
 
 **Fix:** export consumer lag as a metric and alert on it. Replacing a loud
 failure with a quiet one is only an improvement if something is watching.
+
+---
+
+## D15. Format discovery sends real settlement rows to an external service
+
+**Severity:** depends entirely on deployment; recorded so the decision is never
+made by accident.
+
+`reconpilot.ai.format-discovery.sample-rows` (default 5) example rows are sent
+to the Anthropic API along with the header. They are real customer settlement
+data leaving the deployment.
+
+This is a deliberate tradeoff: fewer rows means weaker inference of units and
+coded values, which is the failure mode that produces factor-of-100 errors.
+Zero rows means header-only inference and a materially worse mapping.
+
+**Before production:** decide explicitly. Options are header-only discovery,
+masking identifying columns before sending, or a data-processing agreement
+covering it. The setting exists so the number is a choice; it does not make
+the choice for you.

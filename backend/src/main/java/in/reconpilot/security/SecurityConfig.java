@@ -11,6 +11,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import jakarta.servlet.DispatcherType;
 
 @Configuration
 @EnableWebSecurity
@@ -49,6 +50,17 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
             .authorizeHttpRequests(auth -> auth
+                // Fixes D12. When a request throws, the servlet container does an
+                // ERROR dispatch to /error, which re-enters this filter chain --
+                // by which time JwtAuthFilter's finally block has cleared the
+                // security context. The error dispatch is therefore unauthenticated
+                // and answers 401, so any downstream failure masquerades as an
+                // expired token and sends whoever is debugging to the wrong place.
+                //
+                // Security decisions belong on the original REQUEST dispatch; the
+                // error and async dispatches are the container re-entering a
+                // request it has already authorised.
+                .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC).permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/").permitAll()

@@ -66,6 +66,21 @@ public class ApiExceptionHandler {
         return Map.of("error", "CLAIM_NOT_PERMITTED", "message", e.getMessage());
     }
 
+    /**
+     * Format discovery could not run or could not produce a usable mapping.
+     *
+     * <p>503 rather than 500: the request was fine and the service is healthy;
+     * a dependency it needs is unavailable or unconfigured. The message says
+     * which, because "discovery failed" sends someone to read logs while
+     * "no Anthropic credentials found" is actionable immediately.
+     */
+    @ExceptionHandler(in.reconpilot.format.FormatDiscoveryException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public Map<String, String> handleFormatDiscovery(
+            in.reconpilot.format.FormatDiscoveryException e) {
+        return Map.of("error", "FORMAT_DISCOVERY_UNAVAILABLE", "message", e.getMessage());
+    }
+
     /** A negative amount is the caller's mistake, so it is a 400, not a 500. */
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
