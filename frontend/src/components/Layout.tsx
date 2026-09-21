@@ -10,6 +10,7 @@ import { motion } from 'framer-motion'
 
 const TABS = [
   { label: 'Dashboard', path: '/' },
+  { label: 'Upload',    path: '/upload' },
   { label: 'Breaks',    path: '/breaks' },
 ]
 
@@ -17,7 +18,10 @@ export default function Layout() {
   const { pathname } = useLocation()
   const dispatch = useDispatch()
   const email = useSelector((s: RootState) => s.auth.email)
-  const active = pathname.startsWith('/breaks') || pathname.startsWith('/claims') ? 1 : 0
+  const active =
+    pathname.startsWith('/upload') ? 1
+    : pathname.startsWith('/breaks') || pathname.startsWith('/claims') ? 2
+    : 0
 
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>

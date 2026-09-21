@@ -34,6 +34,33 @@ export interface BreakSummaryRow {
   recoverablePaise: number
 }
 
+/**
+ * Lifecycle of an uploaded settlement file.
+ *
+ * RECEIVED means accepted and queued, nothing more -- the upload returns 202
+ * before any row has been read. PARSED means the rows are in the event log and
+ * the batch can be reconciled.
+ */
+export type BatchStatusValue = 'RECEIVED' | 'PARSING' | 'PARSED' | 'FAILED'
+
+export interface BatchView {
+  batchId: string
+  sourceName: string
+  status: BatchStatusValue
+  rowCount: number | null
+  receivedAt: string
+  startedAt: string | null
+  completedAt: string | null
+  errorMessage: string | null
+}
+
+export interface IngestionSubmission {
+  batchId: string
+  status: BatchStatusValue
+  /** True when this exact file content was uploaded before. See ADR 0008. */
+  alreadySeen: boolean
+}
+
 export interface DisputeView {
   id: string
   breakId: string

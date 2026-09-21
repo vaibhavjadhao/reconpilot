@@ -7,6 +7,7 @@ import Layout from './components/Layout'
 import Toast from './components/Toast'
 import Dashboard from './pages/Dashboard'
 import Breaks from './pages/Breaks'
+import Upload from './pages/Upload'
 import ClaimDetail from './pages/ClaimDetail'
 import Login from './pages/Login'
 
@@ -26,6 +27,7 @@ function Gate() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
+          <Route path="upload" element={<Upload />} />
           <Route path="breaks" element={<Breaks />} />
           <Route path="claims/:id" element={<ClaimDetail />} />
         </Route>

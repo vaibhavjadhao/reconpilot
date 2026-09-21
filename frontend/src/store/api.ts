@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import type {
   BreakView, BreakSummaryRow, DisputeView, DisputeEventView,
-  DisputeSummary, DisputeStatus,
+  DisputeSummary, DisputeStatus, BatchView, IngestionSubmission,
 } from '../types'
 import type { RootState } from './index'
 import { signedOut } from './authSlice'
@@ -38,7 +38,7 @@ const baseQueryWithAuth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQuery
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithAuth,
-  tagTypes: ['Break', 'Dispute'],
+  tagTypes: ['Break', 'Dispute', 'Batch'],
   endpoints: (build) => ({
 
     login: build.mutation<
@@ -53,6 +53,39 @@ export const api = createApi({
       { tenantName: string; email: string; password: string }
     >({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
+    }),
+
+    /**
+     * Uploads a settlement file.
+     *
+     * The body is a FormData and Content-Type is deliberately NOT set: the
+     * browser has to write it itself, because a multipart header carries a
+     * boundary string only the browser knows. Setting it by hand produces a
+     * header with no boundary and a 400 that reads like a server bug.
+     *
+     * Returns 202, not 200. Nothing has been parsed when this resolves -- the
+     * file is staged and queued, and the batch has to be polled.
+     */
+    uploadSettlementFile: build.mutation<IngestionSubmission, File>({
+      query: (file) => {
+        const form = new FormData()
+        form.append('file', file)
+        return { url: '/ingest', method: 'POST', body: form }
+      },
+      invalidatesTags: ['Batch'],
+    }),
+
+    getBatches: build.query<BatchView[], void>({
+      query: () => '/ingest',
+      providesTags: ['Batch'],
+    }),
+
+    reconcileBatch: build.mutation<{ batchId: string; status: string }, string>({
+      query: (batchId) => ({ url: `/recon/${batchId}`, method: 'POST' }),
+      // Reconciliation writes breaks, so the break views are now stale. It is
+      // also queued, so this invalidation is optimistic -- the polling on the
+      // upload screen is what actually observes the result.
+      invalidatesTags: ['Break', 'Batch'],
     }),
 
     getBreakSummary: build.query<BreakSummaryRow[], void>({
@@ -110,6 +143,9 @@ export const api = createApi({
 
 export const {
   useLoginMutation,
+  useUploadSettlementFileMutation,
+  useGetBatchesQuery,
+  useReconcileBatchMutation,
   useRegisterMutation,
   useGetBreakSummaryQuery,
   useGetBreaksQuery,

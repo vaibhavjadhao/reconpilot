@@ -68,7 +68,11 @@ same author would have found.
   SECURITY`, and `WITH CHECK`. All three are required; two of them silently do
   nothing. Verified with two tenants.
 - **Idempotent ingestion** via `ON CONFLICT ... RETURNING`, after a
-  check-then-act race failed 12 of 14 concurrent batches.
+  check-then-act race failed 12 of 14 concurrent batches. Upload the same file
+  twice and the second one is recognised, not double-counted.
+- **Atomic registration.** Creating a tenant and its first user is one
+  statement, because two un-transacted inserts left an orphaned tenant behind
+  on every duplicate email -- a leak nothing read, cleaned up or reported.
 - **Backpressure** — a bounded queue that returns 503 rather than falling over.
 - **TLS** with HSTS on real certificates and deliberately off for self-signed
   ones, because a browser told `max-age=31536000` by `localhost` will not offer
@@ -109,11 +113,11 @@ docker compose -p reconpilot-prod -f docker-compose.prod.yml \
 
 - [**Architecture decision records**](docs/adr/) — 18 of them, each with the
   alternative that was rejected and why
-- [**Known defects**](docs/KNOWN-DEFECTS.md) — 17 recorded, 9 resolved, every
+- [**Known defects**](docs/KNOWN-DEFECTS.md) — 18 recorded, 9 resolved, every
   one with a severity and a reason it is still open
 - [**Open questions**](docs/OPEN-QUESTIONS.md) — the regulatory unknowns that
   gate correctness, with their primary source
-- [**Deploying it**](docs/DEPLOY.md)
+- [**Deploying it**](docs/DEPLOY.md) — including the demo seed
 - [**Concepts and rebuild guide**](docs/ReconPilot-Concepts-and-Rebuild-Guide.pdf)
   — 55 pages
 

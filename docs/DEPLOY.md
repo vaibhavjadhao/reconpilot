@@ -144,7 +144,28 @@ That second command is the proof it worked: HSTS is only sent when the
 certificate is a real one (ADR 0015), so seeing it means nginx is no longer on
 the self-signed one.
 
-## 6. Keep it alive
+## 6. Load the demo tenant
+
+An empty console is a bad first impression. This uploads a quarter of a million
+transactions with 2,000 deliberately wrong charges, through the real API --
+register, upload, reconcile -- so what a visitor sees is the pipeline working,
+not rows someone INSERTed:
+
+```bash
+DEMO_PASSWORD='pick-something' BASE_URL=https://reconpilot.duckdns.org \
+    ./ops/demo/seed-demo.sh
+```
+
+It is re-runnable. The generator is seeded, so the file is byte-identical each
+time and ingestion recognises it rather than double-counting -- which is the
+idempotency doing its job.
+
+Before publishing those credentials anywhere, read **D18**: roles are recorded
+but not enforced, so anyone who signs in to the demo tenant can upload and
+raise claims within it. Row-level security still keeps them out of every other
+tenant.
+
+## 7. Keep it alive
 
 ```bash
 # Renew daily. Certbot only acts in the last 30 days, so this is free on the
@@ -159,7 +180,7 @@ crontab -e
 0 4 1 * * cd ~/reconpilot && docker compose -f docker-compose.prod.yml run --rm --entrypoint /ops/restore-drill.sh backup >> ~/drill.log 2>&1
 ```
 
-## 7. Deploying a change
+## 8. Deploying a change
 
 ```bash
 cd ~/reconpilot && git pull

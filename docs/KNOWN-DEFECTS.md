@@ -362,3 +362,30 @@ matter until backups run against live write traffic.
 Until then, the drill should be read as "the restore matches the database as
 of roughly the dump time", which is enough to catch a dump that lost a table,
 a column or a million rows -- the failures that actually happen.
+
+---
+
+## D18. Roles are recorded but never enforced
+
+**Severity:** medium once a public demo account exists.
+
+Every user carries a role -- `app_user.role`, defaulting to `ANALYST` -- and
+`JwtAuthFilter` turns it into a Spring `ROLE_` authority on every request. That
+is the whole of it. No endpoint checks it. There is no `hasRole`, no
+`@PreAuthorize`, no method security anywhere in the codebase, so an `ANALYST`
+and an `ADMIN` can do exactly the same things.
+
+That was harmless while every account belonged to whoever created it. It stops
+being harmless the moment credentials are published for a public demo: anyone
+who signs in can upload files, raise claims and move disputes through their
+workflow in that tenant. Row-level security still holds -- they cannot see or
+touch another tenant's data -- so the blast radius is the demo tenant and the
+disk it fills.
+
+The fix is a genuine `VIEWER` role plus method security on everything that
+writes, not a UI that hides the buttons: hiding a button makes an action
+inconvenient, not impossible, and the API is reachable directly.
+
+Until then, the demo credentials should be treated as a decision rather than a
+default -- publish them knowing the tenant is writable, and re-run
+`ops/demo/seed-demo.sh` to reset it.
