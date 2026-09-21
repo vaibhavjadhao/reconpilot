@@ -34,6 +34,9 @@ Each cycle produces three files and then prunes to `BACKUP_KEEP` copies:
 
 - `reconpilot-<ts>.dump` -- `pg_dump --format=custom`, compressed, with a
   readable table of contents so `pg_restore` can list it or restore one table.
+- `reconpilot-<ts>.manifest` -- what the database held at dump time: a row
+  count per table and the sum of `transaction_event.amount_paise`, measured by
+  querying the live database rather than by asking pg_dump about itself.
 - `reconpilot-<ts>.globals.sql` -- `pg_dumpall --globals-only`. **Roles are
   cluster-wide objects and `pg_dump` does not contain them.** A dump restored
   onto a fresh server comes back with no `reconpilot_app` role, so every GRANT
@@ -59,13 +62,22 @@ Four properties were chosen deliberately:
   which is to say, none. It would succeed, be the right shape, and be empty.
 - **The container reports unhealthy if no backup has succeeded in twice the
   interval.** Silence becomes a signal something can alert on.
+- **The first backup waits for the schema.** PostgreSQL reports healthy as
+  soon as it accepts connections, which on a fresh deployment is well before
+  the application has run its migrations. See "What CI found" below.
 
 ### The restore drill
 
 `ops/backup/restore-drill.sh` restores the newest backup into a scratch
-database and compares it to the live one, table by table, then sums
-`transaction_event.amount_paise` on both sides -- a row count would not notice a
-column restored as nulls, and the money is the thing whose loss would matter.
+database and compares it, table by table, **against the manifest** -- then
+compares the money, because a row count would not notice a column restored as
+nulls.
+
+Against the manifest, not against the live database. That was the first design
+and it is wrong: by the time anyone runs a drill the live database has moved on
+-- a user registered, a batch landed -- so the drill reports ordinary progress
+as corruption. The manifest is an independent measurement of what was there,
+which is the thing a restore should be judged against.
 It refuses to run if the target is the live database, verifies the checksum
 before trusting the file, and checks the globals file actually creates the
 roles. It inspects that file rather than executing it: running it would reset
@@ -94,7 +106,8 @@ Three corrupted backups were then planted, and each was rejected:
 |---|---|
 | A byte altered on disk after the backup was written | checksum mismatch |
 | Dump truncated mid-write, checksum regenerated to match | `pg_restore --exit-on-error` |
-| Globals file missing | roles check |
+| Globals file missing | globals / checksum check |
+| Dump silently one row short | manifest comparison |
 
 The second is the instructive one. `pg_restore --list` -- the check the backup
 script itself runs at write time -- **succeeded** on the truncated file, because
@@ -105,6 +118,32 @@ why the drill exists as a separate thing, and why `--exit-on-error` is passed:
 `pg_restore` by default reports errors, carries on, and exits 0 with a database
 that is missing things.
 
+## What CI found on its first run
+
+The stack job failed:
+
+```
+drill: FAILED -- globals file does not create role reconpilot_app;
+       a restore onto a fresh server would fail
+```
+
+Not a flaky test. On a fresh deployment the backup container starts as soon as
+PostgreSQL accepts connections, which is *before* the application has run
+Flyway -- so the very first backup of any new deployment was taken while the
+`reconpilot_app` role did not yet exist. That dump restores fine onto the
+original cluster, where the role happens to exist already, and fails on a fresh
+server, which is the only place a backup is ever actually needed.
+
+Nothing local could have caught it. Every laptop run used a database that had
+been migrated days earlier. It took a machine that had never seen the project,
+which is the entire argument for having CI at all.
+
+Two fixes, because one of them is a guess about ordering and the other is not:
+the backup now waits for the role to exist before its first dump, and it
+verifies the globals actually contain both roles before keeping a dump at all.
+A backup that cannot be restored where it matters is never counted as a
+success.
+
 ## What this does not do
 
 The backups sit in a Docker volume on the same machine as the database they
@@ -113,3 +152,8 @@ accidental `DELETE`. It does not survive the machine, the disk, or the cloud
 region. Anything holding real customer money copies these to object storage in
 a different failure domain and runs the drill on a schedule rather than by
 hand. Both remain open under D16.
+
+The manifest is also measured immediately *after* `pg_dump` finishes rather
+than inside the dump's own snapshot, so on a database taking writes during the
+backup the counts can differ from the dump by a handful of rows. Recorded as
+D17.

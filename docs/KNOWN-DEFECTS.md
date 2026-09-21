@@ -336,3 +336,29 @@ None of what remains is an oversight -- a single-machine deployment is the right
 first step and each is a deliberate omission. They are recorded so the gap
 between "it runs" and "it can hold someone else's money" is never mistaken for
 zero.
+
+---
+
+## D17. The backup manifest is not taken inside the dump's snapshot
+
+**Severity:** low. Affects the drill's precision, not the backup itself.
+
+`pg_dump` reads from a consistent snapshot taken when it starts. The manifest
+beside it -- the row counts and the money total the restore drill checks
+against -- is measured by a separate `psql` session once the dump has finished.
+
+On a quiet database the two agree exactly, which is why every drill so far has
+matched to the row. On a database taking writes *during* the backup they can
+differ by however many rows landed in between, and the drill would report that
+as a mismatch: a false alarm, in the one place where false alarms are most
+expensive, because the response to "the backup does not restore" is panic.
+
+The correct fix is for both to share one snapshot: open a session, `BEGIN
+ISOLATION LEVEL REPEATABLE READ`, `SELECT pg_export_snapshot()`, hand that id
+to `pg_dump --snapshot=`, and run the counts in the same still-open
+transaction. It is not hard, it is fiddly in a shell script, and it does not
+matter until backups run against live write traffic.
+
+Until then, the drill should be read as "the restore matches the database as
+of roughly the dump time", which is enough to catch a dump that lost a table,
+a column or a million rows -- the failures that actually happen.

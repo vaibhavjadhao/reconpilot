@@ -109,7 +109,7 @@ docker compose -p reconpilot-prod -f docker-compose.prod.yml \
 
 - [**Architecture decision records**](docs/adr/) — 18 of them, each with the
   alternative that was rejected and why
-- [**Known defects**](docs/KNOWN-DEFECTS.md) — 16 recorded, 9 resolved, every
+- [**Known defects**](docs/KNOWN-DEFECTS.md) — 17 recorded, 9 resolved, every
   one with a severity and a reason it is still open
 - [**Open questions**](docs/OPEN-QUESTIONS.md) — the regulatory unknowns that
   gate correctness, with their primary source

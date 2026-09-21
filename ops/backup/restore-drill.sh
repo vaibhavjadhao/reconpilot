@@ -25,6 +25,7 @@ if [ "$SCRATCH" = "$PGDATABASE" ]; then fail "refusing to restore over the live 
 DUMP=$(ls -1t "$DIR"/reconpilot-*.dump 2>/dev/null | head -1) || true
 [ -n "${DUMP:-}" ] || fail "no backup found in $DIR"
 GLOBALS="${DUMP%.dump}.globals.sql"
+MANIFEST="${DUMP%.dump}.manifest"
 
 log "restoring $(basename "$DUMP") into $SCRATCH"
 
@@ -34,6 +35,7 @@ log "restoring $(basename "$DUMP") into $SCRATCH"
     || fail "checksum mismatch -- the backup on disk is not the backup we wrote"
 
 [ -s "$GLOBALS" ] || fail "no globals file beside the dump; roles would not be restored"
+[ -s "$MANIFEST" ] || fail "no manifest beside the dump; there is nothing to check the restore against"
 # The globals file is inspected, not executed. Running it here would reset the
 # roles of the LIVE cluster to whatever their passwords were when the backup
 # was taken -- a drill must not be able to change the thing it is testing.
@@ -51,38 +53,49 @@ psql -d postgres -v ON_ERROR_STOP=1 -q \
 pg_restore --dbname="$SCRATCH" --exit-on-error --no-owner --no-privileges "$DUMP" \
     || fail "pg_restore reported errors"
 
-log "comparing row counts against the live database"
+log "comparing the restored database against the manifest taken at dump time"
 
-TABLES=$(psql -d "$PGDATABASE" -At -c \
-  "select tablename from pg_tables where schemaname='public' order by tablename")
-
+# Against the MANIFEST, not against the live database. By the time anyone runs
+# a drill the live database has moved on -- a user registered, a batch landed --
+# and comparing a two-hour-old backup against it reports ordinary progress as
+# corruption. The manifest was measured by querying the live database directly,
+# so it is an independent record of what was there, not something pg_dump told
+# us about itself.
 mismatch=0
-for t in $TABLES; do
-    live=$(psql -d "$PGDATABASE" -At -c "select count(*) from public.\"$t\"")
-    rest=$(psql -d "$SCRATCH"    -At -c "select count(*) from public.\"$t\"" 2>/dev/null || echo MISSING)
-    if [ "$live" = "$rest" ]; then
-        printf '  %-26s %10s  ok\n' "$t" "$live"
-    else
-        printf '  %-26s %10s  RESTORED=%s  MISMATCH\n' "$t" "$live" "$rest"
-        mismatch=1
-    fi
-done
 
-# A row-count match is necessary, not sufficient -- it would not notice a
-# column of nulls. This checks the actual money, which is the thing whose loss
-# would matter, by summing it on both sides.
-live_sum=$(psql -d "$PGDATABASE" -At -c "select coalesce(sum(amount_paise),0) from public.transaction_event" 2>/dev/null || echo NA)
-rest_sum=$(psql -d "$SCRATCH"    -At -c "select coalesce(sum(amount_paise),0) from public.transaction_event" 2>/dev/null || echo NA)
-if [ "$live_sum" = "$rest_sum" ]; then
-    log "transaction value matches: $live_sum paise on both sides"
-else
-    log "transaction value DIFFERS: live=$live_sum restored=$rest_sum"
-    mismatch=1
-fi
+while IFS="$(printf '\t')" read -r kind name expected; do
+    case "$kind" in
+      table)
+        actual=$(psql -d "$SCRATCH" -At -c "select count(*) from public.\"$name\"" 2>/dev/null || echo MISSING)
+        if [ "$actual" = "$expected" ]; then
+            printf '  %-26s %12s  ok\n' "$name" "$expected"
+        else
+            printf '  %-26s %12s  RESTORED=%s  MISMATCH\n' "$name" "$expected" "$actual"
+            mismatch=1
+        fi
+        ;;
+      value)
+        # A row count would not notice a column restored as nulls. This checks
+        # the actual money, which is the thing whose loss would matter.
+        actual=$(psql -d "$SCRATCH" -At -c "select coalesce(sum(amount_paise),0) from public.transaction_event" 2>/dev/null || echo NA)
+        if [ "$actual" = "$expected" ]; then
+            log "$name matches: $expected"
+        else
+            log "$name DIFFERS: expected=$expected restored=$actual"
+            mismatch=1
+        fi
+        ;;
+    esac
+done < "$MANIFEST"
+
+# A drill that checks an empty database against an empty manifest proves
+# nothing at all, and would pass forever.
+tables_checked=$(grep -c '^table' "$MANIFEST" || echo 0)
+[ "$tables_checked" -ge 1 ] || fail "the manifest lists no tables; this drill would prove nothing"
 
 if [ "${KEEP_SCRATCH:-false}" != "true" ]; then
     psql -d postgres -q -c "DROP DATABASE IF EXISTS \"$SCRATCH\";"
 fi
 
-[ "$mismatch" -eq 0 ] || fail "the restored database does not match the live one"
-log "PASSED -- $(basename "$DUMP") restores to a database identical to the live one"
+[ "$mismatch" -eq 0 ] || fail "the restored database does not match what the manifest recorded"
+log "PASSED -- $(basename "$DUMP") restores to exactly what the database held at dump time"

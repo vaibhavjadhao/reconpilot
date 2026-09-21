@@ -190,9 +190,16 @@ jobs:
           [ "$code" = "200" ] || { echo "authenticated call failed: $code"; exit 1; }
           echo "end to end over TLS: ok"
 
+      # Take a fresh backup now, AFTER the steps above have put rows in the
+      # database. The container's own first backup ran on an almost-empty
+      # schema, and a drill that checks nothing against nothing passes forever.
+      - name: Back up, now that there is something to lose
+        run: docker compose -f docker-compose.prod.yml run --rm -e BACKUP_ONCE=true backup
+
       # The claim this makes is not "a backup file was produced". It is "the
-      # backup restores to a database identical to the live one", checked
-      # table by table and by summing the money on both sides.
+      # backup restores to exactly what the database held at dump time",
+      # checked table by table against a manifest measured independently of
+      # pg_dump, and by comparing the money.
       - name: Prove the backup restores
         run: |
           docker compose -f docker-compose.prod.yml \
