@@ -299,21 +299,40 @@ the choice for you.
 
 ---
 
-## D16. Single-node deployment has no redundancy, TLS or backups
+## D16. Single-node deployment has no redundancy, off-host backups or alerting
 
 **Severity:** blocking for anything handling real customer money.
+**Partially resolved 2026-09-21:** TLS and backups are done (ADR 0015, ADR 0016).
 
-`docker-compose.prod.yml` runs one of everything on one machine:
+`docker-compose.prod.yml` runs one of everything on one machine. What is left:
 
 - **One Kafka broker.** Replication factor 1, so nothing is replicated and a
   broker loss is data loss. Needs three brokers at RF 3.
-- **No TLS.** nginx serves plain HTTP. Bearer tokens and settlement data cross
-  the network in clear. Belongs at a load balancer or ingress in front.
-- **No Postgres backups.** No schedule, no retention, no restore drill. An
-  untested backup is not a backup.
-- **No log aggregation or alerting.** `docker logs` is the only view, and D14
-  (nothing alerts on consumer lag) is still open.
+- **Backups never leave the machine.** They are taken, verified and restored
+  (ADR 0016), but they live in a Docker volume on the same host as the database
+  they protect. That survives a rebuilt container, a bad migration and an
+  accidental DELETE; it does not survive the disk, the host or the region.
+  Needs a copy in object storage in another failure domain.
+- **The restore drill is run by hand.** It passes (13/13 tables, exact value
+  match) and it rejects planted corruption, but nothing runs it on a schedule,
+  so nothing would notice the day it stops passing.
+- **Nothing is encrypted inside the Docker network.** nginx reaches the
+  backend, and the backend reaches Postgres and Kafka, over plain connections.
+  Acceptable while all of it is on one host on a non-routable network; not
+  acceptable the moment these are separate machines.
+- **No log aggregation or alerting.** `docker logs` is the only view. The
+  backup container now goes unhealthy when backups stop, which is one signal
+  with somewhere to send it -- but D14 (nothing alerts on consumer lag) is
+  still open and there is still nothing watching the healthchecks.
 
-None of these is an oversight -- a single-machine deployment is the right first
-step and each was a deliberate omission. They are recorded so the gap between
-"it runs" and "it can hold someone else's money" is never mistaken for zero.
+**Resolved:**
+
+- ~~No TLS.~~ nginx terminates TLS, port 80 redirects with a 308, HSTS is on
+  for real certificates and deliberately off for self-signed ones (ADR 0015).
+- ~~No Postgres backups.~~ Scheduled, verified, pruned, with a restore drill
+  that was tested against three planted corruptions (ADR 0016).
+
+None of what remains is an oversight -- a single-machine deployment is the right
+first step and each is a deliberate omission. They are recorded so the gap
+between "it runs" and "it can hold someone else's money" is never mistaken for
+zero.

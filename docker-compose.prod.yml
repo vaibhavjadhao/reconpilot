@@ -6,7 +6,7 @@
 #
 # Differences from docker-compose.yml that matter:
 #
-#   * Only the frontend publishes a port. Postgres, Kafka and Redis are
+#   * Only the frontend publishes ports. Postgres, Kafka and Redis are
 #     reachable on the internal Docker network and from nowhere else. In the
 #     dev file they are published so a laptop can reach them with psql; a
 #     deployed database that answers the internet is a database that gets found.
@@ -15,6 +15,11 @@
 #     container means that container, not the host.
 #   * Everything restarts unless explicitly stopped, and waits for its
 #     dependencies to be HEALTHY rather than merely started.
+#   * nginx terminates TLS (ADR 0015) and port 80 only redirects to it.
+#   * A backup container dumps the database on a schedule (ADR 0016). Prove the
+#     backups restore, rather than assuming it:
+#       docker compose -f docker-compose.prod.yml \
+#           run --rm --entrypoint /ops/restore-drill.sh backup
 
 services:
 
@@ -120,10 +125,71 @@ services:
       context: ./frontend
     ports:
       - "${HTTP_PORT:-8081}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    environment:
+      # selfsigned (default, local), provided (real certificate mounted
+      # below), or off (a load balancer in front already terminates TLS).
+      TLS_MODE: ${TLS_MODE:-selfsigned}
+      TLS_SERVER_NAME: ${TLS_SERVER_NAME:-localhost}
+    volumes:
+      # The certificate lives in a volume, not in the image. A private key
+      # baked into a layer is published to every registry and cache the image
+      # ever touches, and cannot be recalled. For TLS_MODE=provided, replace
+      # this line with a read-only bind mount of the real certificate:
+      #   - /etc/letsencrypt/live/recon.example.com:/etc/nginx/tls:ro
+      - tlsdata:/etc/nginx/tls
+      - acmedata:/var/www/acme
     depends_on:
       backend: { condition: service_healthy }
+    healthcheck:
+      # --no-check-certificate because in selfsigned mode the certificate is,
+      # by definition, untrusted. This checks that nginx is serving, not that
+      # the certificate is valid.
+      test: ["CMD-SHELL", "wget -q --no-check-certificate -O /dev/null https://localhost/ || wget -q -O /dev/null http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+  # ------------------------------------------------------------- backups ----
+  # Same image as the database, so pg_dump always matches the server version.
+  # A pg_dump older than the server refuses to run; a newer one is fine, but
+  # pinning them together removes the question.
+  backup:
+    image: postgres:17-alpine
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${DB_NAME}
+      # The owner, not the app role: row-level security applies to the app
+      # role, so a backup taken as reconpilot_app would silently contain only
+      # the rows of whichever tenant happened to be set -- which is to say,
+      # none of them.
+      PGUSER: ${DB_OWNER_USER}
+      PGPASSWORD: ${DB_OWNER_PASSWORD}
+      DB_APP_USER: ${DB_APP_USER:-reconpilot_app}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_KEEP: ${BACKUP_KEEP:-7}
+    volumes:
+      - ./ops/backup:/ops:ro
+      # A named volume keeps backups off the container, but still on the same
+      # machine as the database. That survives a container being rebuilt; it
+      # does not survive the machine. Anything real copies these to object
+      # storage in another failure domain.
+      - backups:/backups
+    entrypoint: ["/ops/backup.sh"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "/ops/healthcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
 volumes:
   pgdata:
   kafkadata:
+  backups:
+  tlsdata:
+  acmedata:
