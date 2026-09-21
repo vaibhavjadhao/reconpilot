@@ -144,6 +144,19 @@ verifies the globals actually contain both roles before keeping a dump at all.
 A backup that cannot be restored where it matters is never counted as a
 success.
 
+## The second thing CI taught us
+
+The next run was green -- and proved nothing. The drill reported `ok` for all
+thirteen tables, because every one of them held zero rows: the job registered
+a user and never ingested anything, so the backup was of an empty database and
+the manifest agreed with it perfectly. A drill that checks nothing against
+nothing passes forever.
+
+Green CI that asserts nothing is worse than red CI, because red gets
+investigated. The job now generates 20,000 settlement rows with 150
+deliberately wrong ones, ingests them, reconciles them, asserts that exactly
+150 breaks were found, and only then takes the backup the drill restores.
+
 ## What this does not do
 
 The backups sit in a Docker volume on the same machine as the database they
