@@ -20,7 +20,7 @@ concurrency:
 jobs:
 
   backend:
-    name: Backend - 119 tests
+    name: Backend - unit and integration tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
