@@ -18,7 +18,7 @@ theory.
 | 03 | [Java, the language](03-java.md) | ✅ done |
 | 04 | [PostgreSQL and SQL](06-postgresql.md) | ✅ done |
 | 05 | [Docker and containers](05-docker.md) | ✅ done |
-| 06 | Kafka | planned |
+| 06 | [Kafka](07-kafka.md) | ✅ done |
 | 07 | Redis and caching | planned |
 | 08 | React, Redux and TypeScript | planned |
 | 09 | JavaScript, the language | planned |
