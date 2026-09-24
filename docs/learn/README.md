@@ -17,7 +17,7 @@ theory.
 | 02 | Spring Boot interview questions | planned |
 | 03 | [Java, the language](03-java.md) | ✅ done |
 | 04 | PostgreSQL and SQL | planned |
-| 05 | Docker and containers | planned |
+| 05 | [Docker and containers](05-docker.md) | ✅ done |
 | 06 | Kafka | planned |
 | 07 | Redis and caching | planned |
 | 08 | React, Redux and TypeScript | planned |
