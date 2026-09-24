@@ -24,7 +24,7 @@ theory.
 | 09 | [JavaScript, the language](09-javascript.md) | ✅ done |
 | 10 | [Testing: JUnit, Mockito, Testcontainers](10-testing.md) | ✅ done |
 | 11 | [System design for a two-year engineer](11-system-design.md) | ✅ done |
-| 12 | Angular | planned |
+| 12 | [Angular](13-angular.md) | ✅ done |
 
 Interview-question documents accompany each stack, with at least fifty
 questions and full answers.
