@@ -19,7 +19,7 @@ theory.
 | 04 | [PostgreSQL and SQL](06-postgresql.md) | ✅ done |
 | 05 | [Docker and containers](05-docker.md) | ✅ done |
 | 06 | [Kafka](07-kafka.md) | ✅ done |
-| 07 | Redis and caching | planned |
+| 07 | [Redis and caching](12-redis.md) | ✅ done |
 | 08 | [React, Redux and TypeScript](08-react-redux-typescript.md) | ✅ done |
 | 09 | [JavaScript, the language](09-javascript.md) | ✅ done |
 | 10 | [Testing: JUnit, Mockito, Testcontainers](10-testing.md) | ✅ done |
