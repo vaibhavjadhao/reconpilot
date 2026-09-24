@@ -22,7 +22,7 @@ theory.
 | 07 | Redis and caching | planned |
 | 08 | [React, Redux and TypeScript](08-react-redux-typescript.md) | ✅ done |
 | 09 | [JavaScript, the language](09-javascript.md) | ✅ done |
-| 10 | Testing: JUnit, Mockito, Testcontainers | planned |
+| 10 | [Testing: JUnit, Mockito, Testcontainers](10-testing.md) | ✅ done |
 | 11 | System design for a two-year engineer | planned |
 | 12 | Angular | planned |
 
