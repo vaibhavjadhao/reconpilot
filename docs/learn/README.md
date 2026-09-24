@@ -26,8 +26,12 @@ theory.
 | 11 | [System design for a two-year engineer](11-system-design.md) | ✅ done |
 | 12 | [Angular](13-angular.md) | ✅ done |
 
-Interview-question documents accompany each stack, with at least fifty
-questions and full answers.
+### Interview questions
+
+| # | Document | Status |
+|---|---|---|
+| 04 | [Java interview questions](04-java-interview-questions.md) (66 + code) | ✅ done |
+| 02 | Spring Boot interview questions | next |
 
 ## How to read these
 
