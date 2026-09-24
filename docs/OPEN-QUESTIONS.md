@@ -77,6 +77,47 @@ Primary source: [DFS MDR FAQ, 15 Sept 2026](rules/dfs-mdr-faq-2026-09-15.pdf)
 
 ---
 
+---
+
+## Open -- SettleSure (marketplace fees)
+
+14. **Per-category commission rates above the exemption band.** Amazon's
+    March 2026 change was published as a reduction of "4% to 9.5%", which is a
+    delta and not a rate. Flipkart publishes a 3%-25% band without the
+    per-category table. Only Amazon mobile phones (5%) and fashion jewellery
+    (22.5%) are encoded; every other category above the free band is reported
+    unverifiable rather than guessed.
+
+15. **Closing / fixed fee above Rs 500.** Amazon's cut to Rs 20 below Rs 300
+    and Rs 26 between Rs 300 and Rs 500 is citable. Higher slabs are not.
+    Flipkart's fixed fee is quoted as Rs 6-Rs 46 "by seller tier", and the
+    tiering makes it seller-specific rather than a published constant.
+
+16. **Shipping fee tables.** Depend on weight band, zone, and fulfilment
+    channel. No citable source, so shipping is never compared.
+
+17. **Collection fee by payment mode.** Quoted as 1-2% with cash on delivery
+    costing more, but no published table. Material: roughly half of Indian
+    orders are cash on delivery.
+
+18. **Rounding rule.** Same question as MDR open question 5, and equally
+    unpublished. Pinned provisionally to HALF_UP in
+    `MarketplaceFeeCalculator.ROUNDING` with tests asserting the resulting
+    boundaries, so changing it is deliberate and visible.
+
+19. **Does GST apply to every component?** 18% on marketplace fees is well
+    established and claimable as input credit by a registered seller. Whether
+    every component is taxed identically is assumed, not sourced.
+
+### Where to look next for these
+
+A real seller account. Amazon Seller Central and the Flipkart Seller Hub both
+show the live rate card for the logged-in seller, including the tier-specific
+fixed fee. That is the primary source, and unlike the NPCI circular it is
+obtainable today by anyone who registers as a seller.
+
+---
+
 ## Where to look next
 
 The DFS FAQ is a policy document. Operational detail (rounding, MCC mapping,
