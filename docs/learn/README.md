@@ -20,7 +20,7 @@ theory.
 | 05 | [Docker and containers](05-docker.md) | ✅ done |
 | 06 | [Kafka](07-kafka.md) | ✅ done |
 | 07 | Redis and caching | planned |
-| 08 | React, Redux and TypeScript | planned |
+| 08 | [React, Redux and TypeScript](08-react-redux-typescript.md) | ✅ done |
 | 09 | JavaScript, the language | planned |
 | 10 | Testing: JUnit, Mockito, Testcontainers | planned |
 | 11 | System design for a two-year engineer | planned |
