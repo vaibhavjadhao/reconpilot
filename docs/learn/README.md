@@ -15,7 +15,7 @@ theory.
 |---|---|---|
 | 01 | [Spring Boot, properly](01-spring-boot.md) | ✅ done |
 | 02 | Spring Boot interview questions | planned |
-| 03 | Java, the language | planned |
+| 03 | [Java, the language](03-java.md) | ✅ done |
 | 04 | PostgreSQL and SQL | planned |
 | 05 | Docker and containers | planned |
 | 06 | Kafka | planned |
