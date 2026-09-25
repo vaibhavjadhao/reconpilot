@@ -32,6 +32,7 @@ theory.
 |---|---|---|
 | 04 | [Java interview questions](04-java-interview-questions.md) (66 + code) | ✅ done |
 | 02 | [Spring Boot interview questions](02-spring-boot-interview-questions.md) (72) | ✅ done |
+| 14 | [System design interview questions](14-system-design-interview-questions.md) (13 iconic problems) | ✅ done |
 
 ## How to read these
 
